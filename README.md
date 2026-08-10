@@ -64,6 +64,14 @@ off. That end state is genuinely local — it just costs one afternoon with a ve
 **Brand:** Consciot, a brand of **AiDot Inc.** Sibling brands include **Linkind**, **OREiN** and
 **Winees**. The app is **AiDot**.
 
+**Model, read from the device itself:** `LK.light.A001577`. The **`LK`** prefix is **Linkind** —
+direct confirmation of the AiDot/Linkind lineage, from the hardware rather than from brand
+association.
+
+> The bulb's Bluetooth advertisement name (`AiDot-XXXX`) is derived from the **last four hex digits
+> of its MAC address**. It is not a Matter discriminator and carries no Matter meaning in either
+> direction — worth knowing, because it looks like a clue and isn't.
+
 **Manufacturer:** the A19 manual names **Leedarson IoT Technology Inc.** (Xiamen) as producer, with
 Spring Sunshine Technology Co., Ltd (HK) as importer of record. Leedarson is a tier-1 lighting ODM
 that builds for major brands (FCC grantee codes `2AB2Q`, `2AVZB`). AiDot's own FCC grantee code is
@@ -216,6 +224,27 @@ it closes out a defect that is degrading other people's installs this week.
 > repository.** That is a null signal, not a positive one — real reports land on the vendor repo.
 > Judge the fork on its code, which is where the evidence above comes from.
 
+### And the fork choice was confirmed empirically, by accident
+
+While driving a bulb directly against `python-aidot`, the upstream status-read path failed with
+*"recv json error: the length of the provided data is not a multiple of the block length"*, then
+timed out.
+
+**That is precisely the defect the fork patches** — its `PatchedDeviceClient.async_refresh_status()`
+carries a comment about the ping loop causing "false timeout/reset loops". Using the fork's
+sequence (`reset → login → getDevAttrReq → read`) made status reads work reliably.
+
+So the recommendation is no longer only an argument from reading source: the unpatched path was
+observed failing, and the fork's patch was observed fixing it. Two further notes from the same
+session, both practical:
+
+- **`python-aidot` 0.3.41 imports `cryptography` without declaring it.** Harmless under Home
+  Assistant, which pulls it in transitively, but a bare `pip install python-aidot` fails at import
+  — it will bite any standalone tooling you write.
+- **Rapid reconnects are flaky.** Back-to-back `reset()` → `login()` gets the socket reset; a
+  ~1.5 s pause and a retry made it reliable. Another reason to leave the poll interval at 60 s
+  rather than hammering the bulbs.
+
 ### Step 1 — a throwaway AiDot account
 
 The app is unavoidable; your real identity is not. Create the account with an alias address. This
@@ -256,7 +285,26 @@ troubleshooting.
 
 ## 4. 🔴 Back up the keys the same day
 
-The `deviceId` / `password` / **`aesKey`** triplet is issued **only by AiDot's cloud**. It is the
+> ### 🔴 It is a **quadruplet**, not a triplet — this bit people
+> ```
+> userId  +  deviceId  +  password  +  aesKey
+> ```
+> The bulb's local TCP login payload is `{userId, password}`, so **the account user id is
+> required** alongside the per-device secrets. A backup without it fails with
+> `[Errno 104] Connection reset by peer`.
+>
+> **This was found the expensive way, on real hardware.** A backup missing `userId` looks
+> perfectly healthy — right file, right device count, round-trip decrypt verified — and then fails
+> at exactly the moment you need it, in a vendor-death scenario with no cloud left to re-fetch
+> from. **A backup that verifies its own integrity while omitting a required field is worse than
+> no backup, because it buys false confidence.** The tool in this repo captures `userId` and warns
+> loudly if it is missing. Account access/refresh **tokens** stay excluded — only the non-secret
+> `id` is stored.
+>
+> **If you took a backup before this was fixed, re-run it.** The old file will decrypt cleanly and
+> still be unusable.
+
+The `userId` / `deviceId` / `password` / **`aesKey`** set is issued **only by AiDot's cloud**. It is the
 sole thing keeping these bulbs controllable if AiDot ever shuts its servers down. **Back up all six
 immediately after onboarding.**
 
@@ -284,8 +332,8 @@ success. A backup that has not been round-tripped is a claim, not a backup.
 >
 > - encrypt it, and store it in a password manager or an encrypted volume
 > - **never commit it to a repository**, and never paste it into an issue or a chat
-> - if you would rather not handle the whole file, **extract just the per-bulb triplet** and back
->   that up instead — it is all you actually need
+> - if you would rather not handle the whole file, **extract just the account `userId` and the
+>   per-bulb credentials** and back those up instead — that is all you actually need
 
 **Why this matters more than it sounds.** This is the lesson of every dead-cloud bulb project,
 applied one device *earlier*. When a vendor dies, its key issuance dies with it: the secrets become
@@ -324,6 +372,19 @@ limitation independently, and reaching the same place.
 > session. Once bulbs are configured by IP, discovery is not in the path at all, which is why
 > manual configuration is a clean permanent answer rather than a workaround.
 
+> ### ⚠️ Do not use `ping` to check whether a bulb is alive — it will lie
+> **Field-confirmed:** these bulbs do **not answer ICMP at all** (100% packet loss) while
+> **TCP 10000 is open and fully functional**. A dead-looking ping says nothing about the bulb.
+>
+> Probe the control port instead:
+>
+> ```bash
+> nc -vz -w3 <bulb-ip> 10000        # or: python3 -c "import socket;socket.create_connection((\"<bulb-ip>\",10000),3)"
+> ```
+>
+> This costs a real diagnostic hour if you learn it the hard way, because every instinct says to
+> ping first.
+
 ---
 
 ## 6. Proving it is really local
@@ -334,12 +395,21 @@ This is both the final setup step and the falsifiable test of everything above.
 2. **Restart Home Assistant.**
 3. **Confirm control still works** — on/off, brightness, color, from the HA UI.
 
-> ### 🚧 This is the one genuinely unverified claim in this document
-> The fork's README says "no cloud dependency for device control," and its protocol documentation
-> implies credentials are cached — but neither states outright that they survive a restart. **The
-> restart is the part that matters**: it is what distinguishes credentials genuinely persisted to
-> disk from credentials merely held in memory since login. Do not take either project's marketing
-> on faith; run the test yourself, and know the answer before you need it.
+> ### ✅ Local control is proven — with zero cloud contact
+> **Field-verified on real hardware.** Commands were driven using credentials read from the
+> encrypted backup **only**, with **no cloud calls in the path at all**, and confirmed by
+> **reading the state back** over the local protocol — proving the bulb actually acted, rather
+> than merely that a socket accepted bytes. On/off, dimming, full RGBW and tunable white all
+> responded correctly.
+
+> ### 🚧 Still unverified — and it is now a narrower question
+> The test above ran while the bulb still had WAN access, so it proves the **cloud is not in the
+> command path**. It does not yet prove the credentials **survive a Home Assistant restart while
+> the WAN is blocked** — and the restart is precisely what distinguishes credentials genuinely
+> persisted to disk from credentials merely held in memory since login.
+>
+> That remains the single assumption the no-cloud end state rests on. Run the three steps above
+> yourself and know the answer **before** you need it.
 
 Once it passes, **leave the egress block in place permanently.** There is nothing on the far side
 of it you want — and with the block in place, a future vendor shutdown becomes a non-event.
@@ -355,14 +425,25 @@ One `light.*` entity per bulb:
 
 | Capability | Notes |
 |---|---|
-| On / off | ✅ |
-| Brightness | ✅ |
-| Color temperature | ✅ ~**2700 K – 6500 K** |
-| RGB color | ✅ on capable devices — this bulb is advertised as color-changing |
+| On / off | ✅ **field-confirmed** by command + state readback |
+| Brightness | ✅ **field-confirmed** |
+| Color temperature | ✅ **field-confirmed** (tunable white) |
+| RGBW color | ✅ **field-confirmed** — four channels, not plain RGB |
 | Transitions | ⚠️ integration-dependent, not a protocol guarantee |
 | Vendor effects / music sync | ❌ app-side only; these do not cross into HA |
 | Power / energy metering | ❌ not present in this hardware class |
 | Firmware updates | ❌ not surfaced — updates go through the vendor app |
+
+The device advertises `control.onoff`, `control.light.dimming`, `control.light.cct` and
+`control.light.rgbw`, and all four were exercised against a live bulb with the result read back.
+**This resolves the earlier open question of whether these are RGBW or CCT-only — they are full
+RGBW.**
+
+> ### ⚠️ Watch item — colour-temperature range may be missing in the UI
+> The bulb's CCT service module carries **no min/max properties**, so the library never populates
+> `cct_min` / `cct_max`. Home Assistant may therefore show **no colour-temperature range** for this
+> model. Colour temperature itself still works — 5000 K was accepted and read back correctly — the
+> UI may simply lack the range hints.
 
 **What you give up versus the app:** music-sync and microphone reactivity, and the vendor's canned
 scenes. What you get back is a light that works when the internet doesn't, responds without a
@@ -536,14 +617,32 @@ flash before writing anything, and only then decide whether to do the other five
 
 ## 11. Open questions
 
-- [ ] 🚧 **Do the fork's cached credentials survive a Home Assistant restart with the WAN blocked?**
-      Implied by its protocol documentation, not stated outright. **This is the load-bearing
-      unverified claim in this document** — [§6](#6-proving-it-is-really-local) is the test.
+### Still open
+
+- [ ] 🚧 **Do the cached credentials survive a Home Assistant restart with the WAN blocked?**
+      Local control with zero cloud contact is now **proven** — but that test ran with the bulb
+      still on the internet. The restart-under-blockade half is untested. **This is the
+      load-bearing unverified claim in this document** — [§6](#6-proving-it-is-really-local) is
+      the test.
+- [ ] **Does Home Assistant show a colour-temperature range?** The CCT service module reports no
+      min/max, so the UI may omit the range even though colour temperature works.
 - [ ] **What SoC is inside?** Unidentified. Two conflicting leads ([§10](#10-flashing--the-last-resort)),
       no public teardown. Only matters if flashing is ever attempted.
-- [ ] **Does the fork expose full RGB on this model,** or only brightness + color temperature?
 - [ ] **Can the `aesKey` be recovered from a flash dump?** Would remove the cloud from key issuance
       entirely — but requires UART, so it collapses into [§10](#10-flashing--the-last-resort) anyway.
+
+### Resolved by field testing
+
+Kept with their answers rather than deleted — a resolved question records *how* it was settled.
+
+- [x] ~~**Does the AiDot account log in cleanly?**~~ **Yes** — US region, no 2FA, no region
+      mismatch, repeatable across several sessions.
+- [x] ~~**Are these RGBW or colour-temperature only?**~~ **Full RGBW**, plus tunable white and
+      dimming — every channel exercised against a live bulb with the result read back.
+- [x] ~~**What is the real credential shape?**~~ A **quadruplet** — and answering it exposed a
+      genuine defect in this repo's own backup tool ([§4](#4--back-up-the-keys-the-same-day)).
+- [x] ~~**Does local control actually work without the cloud?**~~ **Yes** — driven from the
+      encrypted backup alone, zero cloud calls, confirmed by state readback.
 - [ ] 🚧 **Does claiming the manufacturer channel close the Matter commissioning window?** The
       hypothesis in [§8](#8-security--an-open-commissioning-window) — that onboarding a Matter unit
       through the AiDot app occupies the channel that kept the legacy line safe. **Untested by the

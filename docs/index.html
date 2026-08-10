@@ -372,6 +372,17 @@ footer p{max-width:74ch}
       <p><strong>Brand:</strong> Consciot, a brand of <strong>AiDot Inc.</strong> Sibling brands
       include <strong>Linkind</strong>, <strong>OREiN</strong> and <strong>Winees</strong>. The app is
       <strong>AiDot</strong>.</p>
+      <p><strong>Model, read from the device itself:</strong> <code>LK.light.A001577</code>. The
+      <strong><code>LK</code></strong> prefix is <strong>Linkind</strong> — direct confirmation of the
+      AiDot/Linkind lineage, from the hardware rather than from brand association.</p>
+
+      <div class="note">
+        <div class="nh">The BLE name is not a Matter clue</div>
+        <p>The bulb's Bluetooth advertisement name (<code>AiDot-XXXX</code>) is derived from the
+        <strong>last four hex digits of its MAC address</strong>. It carries no Matter meaning in
+        either direction — worth knowing, because it looks like a clue and isn't.</p>
+      </div>
+
       <p><strong>Manufacturer:</strong> the A19 manual names <strong>Leedarson IoT Technology Inc.</strong>
       (Xiamen) as producer, with Spring Sunshine Technology Co., Ltd (HK) as importer of record.
       Leedarson is a tier-1 lighting ODM that builds for major brands (FCC grantee codes
@@ -539,6 +550,27 @@ footer p{max-width:74ch}
         comes from.</p>
       </div>
 
+      <h3>And the fork choice was confirmed empirically, by accident</h3>
+      <p>While driving a bulb directly against <code>python-aidot</code>, the upstream status-read path
+      failed with <em>"recv json error: the length of the provided data is not a multiple of the block
+      length"</em>, then timed out.</p>
+      <p><strong>That is precisely the defect the fork patches</strong> — its
+      <code>PatchedDeviceClient.async_refresh_status()</code> carries a comment about the ping loop
+      causing "false timeout/reset loops". Using the fork's sequence
+      (<code>reset → login → getDevAttrReq → read</code>) made status reads work reliably.</p>
+      <p>So the recommendation is no longer only an argument from reading source: the unpatched path
+      was observed failing, and the fork's patch was observed fixing it. Two further notes from the
+      same session, both practical:</p>
+      <ul>
+        <li><strong><code>python-aidot</code> 0.3.41 imports <code>cryptography</code> without
+        declaring it.</strong> Harmless under Home Assistant, which pulls it in transitively, but a
+        bare <code>pip install python-aidot</code> fails at import — it will bite any standalone
+        tooling you write.</li>
+        <li><strong>Rapid reconnects are flaky.</strong> Back-to-back <code>reset()</code> →
+        <code>login()</code> gets the socket reset; a ~1.5 s pause and a retry made it reliable.
+        Another reason to leave the poll interval at 60 s rather than hammering the bulbs.</li>
+      </ul>
+
       <h3>Step 1 — a throwaway AiDot account</h3>
       <p>The app is unavoidable; your real identity is not. Create the account with an alias address.
       This minimises what the vendor learns and costs nothing.</p>
@@ -574,10 +606,28 @@ footer p{max-width:74ch}
 
     <section id="keys">
       <h2>4. 🔴 Back up the keys the same day</h2>
-      <p>The <code>deviceId</code> / <code>password</code> / <strong><code>aesKey</code></strong>
-      triplet is issued <strong>only by AiDot's cloud</strong>. It is the sole thing keeping these
-      bulbs controllable if AiDot ever shuts its servers down. <strong>Back up all six immediately
-      after onboarding.</strong></p>
+      <div class="note danger">
+        <div class="nh">🔴 It is a quadruplet, not a triplet — this bit people</div>
+        <pre><code>userId  +  deviceId  +  password  +  aesKey</code></pre>
+        <p>The bulb's local TCP login payload is <code>{userId, password}</code>, so <strong>the
+        account user id is required</strong> alongside the per-device secrets. A backup without it
+        fails with <code>[Errno 104] Connection reset by peer</code>.</p>
+        <p><strong>This was found the expensive way, on real hardware.</strong> A backup missing
+        <code>userId</code> looks perfectly healthy — right file, right device count, round-trip
+        decrypt verified — and then fails at exactly the moment you need it, in a vendor-death
+        scenario with no cloud left to re-fetch from. <strong>A backup that verifies its own integrity
+        while omitting a required field is worse than no backup, because it buys false
+        confidence.</strong> The tool in this repo captures <code>userId</code> and warns loudly if it
+        is missing. Account access/refresh <strong>tokens</strong> stay excluded — only the non-secret
+        <code>id</code> is stored.</p>
+        <p><strong>If you took a backup before this was fixed, re-run it.</strong> The old file will
+        decrypt cleanly and still be unusable.</p>
+      </div>
+
+      <p>The <code>userId</code> / <code>deviceId</code> / <code>password</code> /
+      <strong><code>aesKey</code></strong> set is issued <strong>only by AiDot's cloud</strong>. It is
+      the sole thing keeping these bulbs controllable if AiDot ever shuts its servers down.
+      <strong>Back up all six immediately after onboarding.</strong></p>
       <p>With the fork, the credentials live in Home Assistant's
       <code>.storage/core.config_entries</code>.</p>
 
@@ -601,8 +651,9 @@ footer p{max-width:74ch}
         <ul>
           <li>encrypt it, and store it in a password manager or an encrypted volume</li>
           <li><strong>never commit it to a repository</strong>, and never paste it into an issue or a chat</li>
-          <li>if you would rather not handle the whole file, <strong>extract just the per-bulb
-          triplet</strong> and back that up instead — it is all you actually need</li>
+          <li>if you would rather not handle the whole file, <strong>extract just the account
+          <code>userId</code> and the per-bulb credentials</strong> and back those up instead — that is
+          all you actually need</li>
         </ul>
       </div>
 
@@ -649,6 +700,17 @@ footer p{max-width:74ch}
         <p><strong>UDP :6666 is discovery only</strong> — actual control is the AES-encrypted TCP
         :10000 session. Once bulbs are configured by IP, discovery is not in the path at all.</p>
       </div>
+
+      <div class="note warn">
+        <div class="nh">⚠️ Do not use <code>ping</code> to check whether a bulb is alive — it will lie</div>
+        <p><strong>Field-confirmed:</strong> these bulbs do <strong>not answer ICMP at all</strong>
+        (100% packet loss) while <strong>TCP 10000 is open and fully functional</strong>. A dead-looking
+        ping says nothing about the bulb.</p>
+        <p>Probe the control port instead:</p>
+        <pre><code>nc -vz -w3 &lt;bulb-ip&gt; 10000</code></pre>
+        <p>This costs a real diagnostic hour if you learn it the hard way, because every instinct says
+        to ping first.</p>
+      </div>
     </section>
 
     <section id="local">
@@ -660,14 +722,24 @@ footer p{max-width:74ch}
         <li><strong>Confirm control still works</strong> — on/off, brightness, color, from the HA UI.</li>
       </ol>
 
+      <div class="note good">
+        <div class="nh">✅ Local control is proven — with zero cloud contact</div>
+        <p><strong>Field-verified on real hardware.</strong> Commands were driven using credentials
+        read from the encrypted backup <strong>only</strong>, with <strong>no cloud calls in the path
+        at all</strong>, and confirmed by <strong>reading the state back</strong> over the local
+        protocol — proving the bulb actually acted, rather than merely that a socket accepted bytes.
+        On/off, dimming, full RGBW and tunable white all responded correctly.</p>
+      </div>
+
       <div class="note warn">
-        <div class="nh">🚧 This is the one genuinely unverified claim in this document</div>
-        <p>The fork's README says "no cloud dependency for device control," and its protocol
-        documentation implies credentials are cached — but neither states outright that they survive a
-        restart. <strong>The restart is the part that matters</strong>: it is what distinguishes
-        credentials genuinely persisted to disk from credentials merely held in memory since login. Do
-        not take either project's marketing on faith; run the test yourself, and know the answer before
-        you need it.</p>
+        <div class="nh">🚧 Still unverified — and it is now a narrower question</div>
+        <p>The test above ran while the bulb still had WAN access, so it proves the <strong>cloud is
+        not in the command path</strong>. It does not yet prove the credentials <strong>survive a Home
+        Assistant restart while the WAN is blocked</strong> — and the restart is precisely what
+        distinguishes credentials genuinely persisted to disk from credentials merely held in memory
+        since login.</p>
+        <p>That remains the single assumption the no-cloud end state rests on. Run the three steps
+        above yourself and know the answer <strong>before</strong> you need it.</p>
       </div>
 
       <p>Once it passes, <strong>leave the egress block in place permanently.</strong> There is nothing
@@ -684,16 +756,29 @@ footer p{max-width:74ch}
       <table>
         <thead><tr><th>Capability</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td>On / off</td><td>✅</td></tr>
-          <tr><td>Brightness</td><td>✅</td></tr>
-          <tr><td>Color temperature</td><td>✅ ~<strong>2700 K – 6500 K</strong></td></tr>
-          <tr><td>RGB color</td><td>✅ on capable devices — this bulb is advertised as color-changing</td></tr>
+          <tr><td>On / off</td><td>✅ <strong>field-confirmed</strong> by command + state readback</td></tr>
+          <tr><td>Brightness</td><td>✅ <strong>field-confirmed</strong></td></tr>
+          <tr><td>Color temperature</td><td>✅ <strong>field-confirmed</strong> (tunable white)</td></tr>
+          <tr><td>RGBW color</td><td>✅ <strong>field-confirmed</strong> — four channels, not plain RGB</td></tr>
           <tr><td>Transitions</td><td>⚠️ integration-dependent, not a protocol guarantee</td></tr>
           <tr><td>Vendor effects / music sync</td><td>❌ app-side only; these do not cross into HA</td></tr>
           <tr><td>Power / energy metering</td><td>❌ not present in this hardware class</td></tr>
           <tr><td>Firmware updates</td><td>❌ not surfaced — updates go through the vendor app</td></tr>
         </tbody>
       </table>
+      </div>
+
+      <p>The device advertises <code>control.onoff</code>, <code>control.light.dimming</code>,
+      <code>control.light.cct</code> and <code>control.light.rgbw</code>, and all four were exercised
+      against a live bulb with the result read back. <strong>This resolves the earlier open question of
+      whether these are RGBW or CCT-only — they are full RGBW.</strong></p>
+
+      <div class="note warn">
+        <div class="nh">⚠️ Watch item — colour-temperature range may be missing in the UI</div>
+        <p>The bulb's CCT service module carries <strong>no min/max properties</strong>, so the library
+        never populates <code>cct_min</code> / <code>cct_max</code>. Home Assistant may therefore show
+        <strong>no colour-temperature range</strong> for this model. Colour temperature itself still
+        works — 5000 K was accepted and read back correctly — the UI may simply lack the range hints.</p>
       </div>
 
       <p><strong>What you give up versus the app:</strong> music-sync and microphone reactivity, and
@@ -901,14 +986,17 @@ light:
 
     <section id="open">
       <h2>11. Open questions</h2>
+      <h3>Still open</h3>
       <ul>
-        <li>🚧 <strong>Do the fork's cached credentials survive a Home Assistant restart with the WAN
-        blocked?</strong> Implied by its protocol documentation, not stated outright. <strong>This is the
-        load-bearing unverified claim in this document</strong> — <a href="#local">§6</a> is the test.</li>
+        <li>🚧 <strong>Do the cached credentials survive a Home Assistant restart with the WAN
+        blocked?</strong> Local control with zero cloud contact is now <strong>proven</strong> — but
+        that test ran with the bulb still on the internet. The restart-under-blockade half is untested.
+        <strong>This is the load-bearing unverified claim in this document</strong> —
+        <a href="#local">§6</a> is the test.</li>
+        <li><strong>Does Home Assistant show a colour-temperature range?</strong> The CCT service module
+        reports no min/max, so the UI may omit the range even though colour temperature works.</li>
         <li><strong>What SoC is inside?</strong> Unidentified. Two conflicting leads
         (<a href="#flash">§10</a>), no public teardown. Only matters if flashing is ever attempted.</li>
-        <li><strong>Does the fork expose full RGB on this model,</strong> or only brightness + color
-        temperature?</li>
         <li><strong>Can the <code>aesKey</code> be recovered from a flash dump?</strong> Would remove the
         cloud from key issuance entirely — but requires UART, so it collapses into
         <a href="#flash">§10</a> anyway.</li>
@@ -918,6 +1006,23 @@ light:
         the paper's authors and by us.</strong> Only relevant to the Matter SKU, but it is the
         difference between "no mitigation exists" and "there is a workaround", so it is worth
         someone's afternoon.</li>
+      </ul>
+
+      <h3>Resolved by field testing</h3>
+      <p>Kept with their answers rather than deleted — a resolved question records <em>how</em> it was
+      settled.</p>
+      <ul>
+        <li>✅ <strong>Does the AiDot account log in cleanly?</strong> <strong>Yes</strong> — US region,
+        no 2FA, no region mismatch, repeatable across several sessions.</li>
+        <li>✅ <strong>Are these RGBW or colour-temperature only?</strong> <strong>Full RGBW</strong>,
+        plus tunable white and dimming — every channel exercised against a live bulb with the result
+        read back.</li>
+        <li>✅ <strong>What is the real credential shape?</strong> A <strong>quadruplet</strong> — and
+        answering it exposed a genuine defect in this repo's own backup tool
+        (<a href="#keys">§4</a>).</li>
+        <li>✅ <strong>Does local control actually work without the cloud?</strong>
+        <strong>Yes</strong> — driven from the encrypted backup alone, zero cloud calls, confirmed by
+        state readback.</li>
       </ul>
     </section>
 
