@@ -528,6 +528,19 @@ footer p{max-width:74ch}
       <p>With the fork, the credentials live in Home Assistant's
       <code>.storage/core.config_entries</code>.</p>
 
+      <h3>There is a tool in this repo that does it safely</h3>
+      <p><strong><a href="https://github.com/jphein/consciot-a19-smartbulb/blob/main/ha-integration/aidot-key-backup.py"><code>ha-integration/aidot-key-backup.py</code></a></strong>
+      — see the <a href="https://github.com/jphein/consciot-a19-smartbulb/blob/main/ha-integration/README.md">setup runbook</a>
+      for the full flow.</p>
+      <pre><code>./aidot-key-backup.py --host &lt;user&gt;@&lt;ha-host&gt; --dry-run    <span class="cmt"># inspect first</span>
+./aidot-key-backup.py --host &lt;user&gt;@&lt;ha-host&gt; --out ~/secure-backup</code></pre>
+      <p>It filters <strong>on the Home Assistant side</strong>, so only the <code>aidot</code> rows
+      ever cross the wire — the full secrets file is never transferred and never written to local
+      disk. It excludes the AiDot account token by design, never prints a secret, writes gpg-AES256
+      ciphertext at mode <code>0600</code>, <strong>refuses to write inside a git work tree</strong>,
+      and round-trip-decrypts to verify before reporting success. A backup that has not been
+      round-tripped is a claim, not a backup.</p>
+
       <div class="note danger">
         <div class="nh">⚠️ That file contains every integration's secrets — not just AiDot's</div>
         <p>API tokens, cloud passwords and access tokens for <strong>everything else</strong> you have
