@@ -38,7 +38,7 @@ off. That end state is genuinely local — it just costs one afternoon with a ve
 
 > **Buying rather than already owning?** AiDot sells an explicitly **Matter-certified** Consciot SKU
 > that commissions natively into Home Assistant with no app, no account and no cloud at all. It is
-> strictly better and costs about the same. See [§8](#8-the-matter-sku-exists--this-just-isnt-it).
+> strictly better and costs about the same. See [§9](#9-the-matter-sku-exists--this-just-isnt-it).
 
 ---
 
@@ -51,10 +51,11 @@ off. That end state is genuinely local — it just costs one afternoon with a ve
 - [5. Manual IPs are required, not troubleshooting](#5-manual-ips-are-required-not-troubleshooting)
 - [6. Proving it is really local](#6-proving-it-is-really-local)
 - [7. What you get in Home Assistant](#7-what-you-get-in-home-assistant)
-- [8. The Matter SKU exists — this just isn't it](#8-the-matter-sku-exists--this-just-isnt-it)
-- [9. Flashing — the last resort](#9-flashing--the-last-resort)
-- [10. Open questions](#10-open-questions)
-- [11. Prior art & credits](#11-prior-art--credits)
+- [8. Security — an open commissioning window](#8-security--an-open-commissioning-window)
+- [9. The Matter SKU exists — this just isn't it](#9-the-matter-sku-exists--this-just-isnt-it)
+- [10. Flashing — the last resort](#10-flashing--the-last-resort)
+- [11. Open questions](#11-open-questions)
+- [12. Prior art & credits](#12-prior-art--credits)
 
 ---
 
@@ -102,6 +103,16 @@ the same trap:
 SKU-level question. Only the physical box can. If you are documenting one of these, look at the
 carton before building an argument.
 
+A third piece of evidence arrived later and is worth recording *with* its limits, because it is the
+same trap wearing a better disguise: the SafeThings 2024 paper in [§8](#8-security--an-open-commissioning-window)
+**physically tested a "Consciot bulb" over Matter-over-Wi-Fi.** That is stronger evidence than a
+certificate — it is a real device on a bench. It still does not tell you what is in *your* box:
+"a Consciot bulb" is a brand-level identifier, and Consciot ships both lines. Note also that
+**without a setup code printed on the device there is no Matter commissioning path at all**,
+whatever the silicon is capable of — a Matter controller has nothing to commission *with*. So
+Matter-native setup is not an available alternative for these units, however capable the hardware
+may be.
+
 ### One more myth worth killing
 
 **"It broadcasts no setup Wi-Fi network, so it must be Tuya SmartConfig."** No. AiDot provisioning
@@ -137,7 +148,7 @@ Once the keys are cached locally, the fork keeps running without them being re-i
 still work.
 
 **So: the vendor owns your setup day, not your next five years** — provided you complete
-[§4](#--back-up-the-keys-the-same-day).
+[§4](#4--back-up-the-keys-the-same-day).
 
 ---
 
@@ -191,7 +202,7 @@ then add the integration and log in with the throwaway account. Select your hous
 
 ### Step 4 — back it up before you do anything else
 
-→ **[§4](#--back-up-the-keys-the-same-day). Do not skip this.** It is the step that converts a
+→ **[§4](#4--back-up-the-keys-the-same-day). Do not skip this.** It is the step that converts a
 permanent vendor dependency into a one-time errand, and it is only possible while AiDot is alive.
 
 ### Step 5 — configure the bulbs by IP
@@ -331,7 +342,83 @@ light:
 
 ---
 
-## 8. The Matter SKU exists — this just isn't it
+## 8. Security — an open commissioning window
+
+Independent, peer-reviewed research has found a serious flaw in how AiDot's **Matter** devices
+handle commissioning.
+
+> **Shafqat & Ranganathan**, *"Seamlessly Insecure: Uncovering Outsider Access Risks in
+> AiDot-Controlled Matter Devices"* — Northeastern University, **SafeThings 2024**.
+
+**What they found.** On the AiDot Matter devices physically tested — a **Consciot bulb** among them
+— the Matter **commissioning window stays open after the user has finished commissioning the
+device**. Matter's pairing window is supposed to close once a device has joined a fabric. It didn't.
+
+**What that permits.** An outsider can connect to the device and control or monitor it remotely:
+
+- from **more than 30 feet away**, with **no line of sight**
+- with **no QR code** and **no setup code**
+- with **no Wi-Fi credentials** and **no physical access**
+- **without alerting the owner**
+
+The authors replicated it **three times** and confirmed the window was still open **24 hours after
+pairing**. The paper's mitigation column for this finding reads **"None."** AiDot did not respond
+to a **three-month** coordinated disclosure.
+
+### Does this affect these bulbs?
+
+**Probably not — and the reason is the useful part.**
+
+The same paper found AiDot's **legacy, non-Matter** devices were **not** vulnerable, because their
+manufacturer commissioning channel was **already occupied** — leaving no free slot for an outsider
+to claim. These bulbs are the legacy Wi-Fi line (owner-confirmed), so on the paper's own evidence
+they sit in the category that tested *safe*.
+
+> ### 🛑 But this changes the recommendation in §9
+> [§9](#9-the-matter-sku-exists--this-just-isnt-it) tells you to buy the Matter SKU instead, because
+> it is simpler and needs no vendor account. That advice now comes with a caveat: **the Matter SKU
+> is the variant that tested vulnerable.** It is still a defensible choice — the flaw is a
+> commissioning-window bug, not an architectural property of Matter, and it is fixable in firmware —
+> but you should make it knowingly rather than discover it later.
+
+### Mitigations
+
+Stated with what each one actually does, because two of the three are **not** fixes for this
+specific finding:
+
+1. **Keep the bulbs on a dedicated, isolated IoT network** (separate VLAN or SSID).
+   **What it does:** contains blast radius. An attacker who claims a bulb reaches only that segment,
+   not your file server.
+   **What it does not do:** close the window. The attack needs no Wi-Fi credentials, so network
+   segmentation does not prevent the initial access — it limits the consequences. Worth doing
+   regardless; this is defence in depth, not a patch.
+
+2. **Remove the Matter QR / setup-code stickers from the bulbs after setup.**
+   **What it does:** defends against a *different* and simpler attack — someone photographing a
+   visible setup code and commissioning the bulb legitimately.
+   **What it does not do:** address this finding, which explicitly requires **no code at all**.
+   **Photograph and store the codes first** — you need them if you ever factory-reset the bulb, and
+   the sticker is unreadable once the bulb is in a fixture.
+
+3. **Claim the manufacturer channel yourself.**
+   > **🚧 Reasoned hypothesis — unproven. This is not one of the paper's Matter findings.**
+   >
+   > The paper's *legacy* devices were safe precisely because their manufacturer channel was already
+   > occupied. It is therefore plausible that onboarding a Matter unit through the **AiDot app**
+   > occupies that channel and closes the window. **This was not tested on the Matter line**, by the
+   > authors or by us. Treat it as a hypothesis worth investigating, not a mitigation you can rely
+   > on.
+   >
+   > Note the trade-off if it *were* true: installing the vendor app to secure the Matter SKU costs
+   > you the no-app, no-account property that made the Matter SKU attractive in the first place.
+
+**General Matter hygiene, worth knowing regardless of vendor:** a commissioning window that stays
+open is a class of bug, not a one-off. If your controller can list a device's fabrics, check
+periodically that only the fabrics you expect are present.
+
+---
+
+## 9. The Matter SKU exists — this just isn't it
 
 AiDot/Consciot sells an explicitly **Matter-certified** A19 that commissions **natively into Home
 Assistant**: no app, no account, no cloud contact at any point, no keys to back up, and no
@@ -339,6 +426,13 @@ integration to keep alive. It is a strictly better outcome than everything descr
 costs about the same.
 
 **These bulbs are not that SKU** — owner-confirmed from the packaging.
+
+> ### ⚠️ Read [§8](#8-security--an-open-commissioning-window) before acting on this
+> The Matter SKU is the variant that tested **vulnerable** to an open commissioning window in
+> peer-reviewed research: an outsider within radio range, holding no code and no credentials, could
+> claim the device without alerting the owner. It remains a defensible choice — the flaw is a
+> firmware bug rather than a property of Matter, and AiDot's legacy line was unaffected — but the
+> "simpler and safer" framing needs that asterisk. Decide knowingly.
 
 If you are buying rather than already holding a six-pack, buy the Matter one instead. Look for
 **"Matter-Certified" in the listing title** and, decisively, a **Matter logo plus an 11-digit setup
@@ -352,7 +446,7 @@ the Matter SKU is *better and simpler*.
 
 ---
 
-## 9. Flashing — the last resort
+## 10. Flashing — the last resort
 
 Flashing to **ESPHome** is the only path with **zero** vendor involvement at any stage — no account,
 no app, no keys. It is also **not recommended here**, for a concrete reason: **the silicon is
@@ -392,20 +486,25 @@ flash before writing anything, and only then decide whether to do the other five
 
 ---
 
-## 10. Open questions
+## 11. Open questions
 
 - [ ] 🚧 **Do the fork's cached credentials survive a Home Assistant restart with the WAN blocked?**
       Implied by its protocol documentation, not stated outright. **This is the load-bearing
       unverified claim in this document** — [§6](#6-proving-it-is-really-local) is the test.
-- [ ] **What SoC is inside?** Unidentified. Two conflicting leads ([§9](#9-flashing--the-last-resort)),
+- [ ] **What SoC is inside?** Unidentified. Two conflicting leads ([§10](#10-flashing--the-last-resort)),
       no public teardown. Only matters if flashing is ever attempted.
 - [ ] **Does the fork expose full RGB on this model,** or only brightness + color temperature?
 - [ ] **Can the `aesKey` be recovered from a flash dump?** Would remove the cloud from key issuance
-      entirely — but requires UART, so it collapses into [§9](#9-flashing--the-last-resort) anyway.
+      entirely — but requires UART, so it collapses into [§10](#10-flashing--the-last-resort) anyway.
+- [ ] 🚧 **Does claiming the manufacturer channel close the Matter commissioning window?** The
+      hypothesis in [§8](#8-security--an-open-commissioning-window) — that onboarding a Matter unit
+      through the AiDot app occupies the channel that kept the legacy line safe. **Untested by the
+      paper's authors and by us.** Only relevant to the Matter SKU, but it is the difference between
+      "no mitigation exists" and "there is a workaround", so it is worth someone's afternoon.
 
 ---
 
-## 11. Prior art & credits
+## 12. Prior art & credits
 
 **What makes the recommended path possible**
 
@@ -418,6 +517,15 @@ flash before writing anything, and only then decide whether to do the other five
   official built-in option. Easier; see [§3](#3-path-1--hass-aidot--recommended) for why it is not
   the recommendation here.
 
+**Security research**
+
+- **Shafqat & Ranganathan**, *"Seamlessly Insecure: Uncovering Outsider Access Risks in
+  AiDot-Controlled Matter Devices"* — Northeastern University, **SafeThings 2024**. The source for
+  [§8](#8-security--an-open-commissioning-window). Physical testing of AiDot Matter devices,
+  including a Consciot bulb, with a three-month coordinated disclosure the vendor did not answer.
+  Independent security work on budget IoT hardware is rare and thankless; this one is worth reading
+  in full if you own anything on this platform.
+
 **Investigated and *not* applicable**
 
 - **[tuya-cloudcutter](https://github.com/tuya-cloudcutter/tuya-cloudcutter)** — excellent work,
@@ -427,7 +535,7 @@ flash before writing anything, and only then decide whether to do the other five
   inapplicable for the same reason.
 - **LocalTuya** — same. AiDot devices have no Tuya `local_key`.
 
-**If you ever go down [§9](#9-flashing--the-last-resort)**
+**If you ever go down [§10](#10-flashing--the-last-resort)**
 
 - **[ESPHome](https://esphome.io/)** and **[LibreTiny](https://github.com/libretiny-eu/libretiny)**
 - **[OpenBeken](https://github.com/openshwprojects/OpenBK7231T_App)** — if the Beken lead is correct
@@ -442,7 +550,7 @@ Independent interoperability research on hardware the author purchased. No affil
 Consciot, AiDot, Leedarson, Amazon, or Home Assistant.
 
 Paths 1 through 8 involve no disassembly and no warranty impact. Opening a mains-powered bulb voids
-its warranty and carries a real risk of electric shock and fire; [§9](#9-flashing--the-last-resort)
+its warranty and carries a real risk of electric shock and fire; [§10](#10-flashing--the-last-resort)
 is entirely at your own risk.
 
 ## License
