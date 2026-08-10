@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Consciot A19 → Home Assistant, Fully Local</title>
-<meta name="description" content="The Consciot A19 color WiFi bulb (Amazon B0G6YFQDFW) is Matter-certified — commission it straight into Home Assistant. Fully local, no cloud, no app, no flashing.">
+<title>Consciot A19 (AiDot Wi-Fi) → Home Assistant, Local</title>
+<meta name="description" content="Get the Consciot A19 color WiFi bulb (Amazon B0G6YFQDFW, AiDot line) into Home Assistant and keep it working with the cloud cut off — one-time vendor bootstrap, then local forever.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2a10 10 0 0 0-6 18v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a10 10 0 0 0-6-18z' fill='%23f0b34a'/%3E%3Cpath d='M12 27h8v2a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z' fill='%23888'/%3E%3Cpath d='M16 21v-5m0 0-3.4-3.4M16 16l3.4-3.4' stroke='%236d4aff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
@@ -98,8 +98,8 @@ header.hero{
 .eyebrow{
   display:inline-flex;align-items:center;gap:.55em;
   font:600 11.5px/1 var(--mono); letter-spacing:.13em; text-transform:uppercase;
-  color:var(--good); background:var(--good-wash);
-  border:1px solid var(--good-rule); border-radius:999px; padding:7px 13px;
+  color:var(--accent-ink); background:var(--accent-wash);
+  border:1px solid var(--rule); border-radius:999px; padding:7px 13px;
 }
 h1{
   font-size:clamp(2rem,5.2vw,3.25rem); line-height:1.06; letter-spacing:-.025em;
@@ -211,6 +211,19 @@ figure{margin:0 0 1.5em}
 .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
 figcaption{margin-top:.7em;font-size:13.5px;color:var(--ink-faint);text-align:center}
 
+/* ═══ STEPS ═══ */
+ol.steps{counter-reset:s;list-style:none;padding-left:0;margin:0 0 1.4em}
+ol.steps>li{
+  counter-increment:s; position:relative; padding-left:44px; margin:0 0 14px;
+}
+ol.steps>li::before{
+  content:counter(s); position:absolute; left:0; top:-1px;
+  width:29px;height:29px;border-radius:50%;
+  display:grid;place-items:center;
+  font:650 13.5px/1 var(--mono); color:var(--accent-ink);
+  background:var(--accent-wash); border:1px solid var(--accent);
+}
+
 /* ═══ BADGES ═══ */
 .badge{
   display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.05em;
@@ -219,17 +232,6 @@ figcaption{margin-top:.7em;font-size:13.5px;color:var(--ink-faint);text-align:ce
 .badge.b-wip{background:var(--warn-wash);color:var(--warn);border-color:var(--warn-rule)}
 .badge.b-ok{background:var(--good-wash);color:var(--good);border-color:var(--good-rule)}
 .badge.b-no{background:var(--danger-wash);color:var(--danger);border-color:var(--danger-rule)}
-
-/* ═══ DETAILS ═══ */
-details{
-  border:1px solid var(--rule); border-radius:9px; padding:0 16px;
-  background:var(--bg-raised); margin:0 0 1.35em; box-shadow:var(--shadow);
-}
-details summary{
-  cursor:pointer; padding:13px 0; font-weight:600; font-size:.96rem; color:var(--ink-soft);
-}
-details[open] summary{border-bottom:1px solid var(--rule-soft);margin-bottom:14px}
-details>:last-child{margin-bottom:14px}
 
 /* ═══ FOOTER ═══ */
 footer{
@@ -244,11 +246,11 @@ footer p{max-width:74ch}
 
 <header class="hero">
   <div class="wrap hero-inner">
-    <span class="eyebrow">✅ Matter-certified · CSA VID 0x1396</span>
-    <h1>Consciot A19 → Home Assistant, <span class="hl">fully local</span></h1>
+    <span class="eyebrow">AiDot Wi-Fi line · not Matter · not Tuya</span>
+    <h1>Consciot A19 → Home Assistant, <span class="hl">local forever</span></h1>
     <p class="sub">
-      Six color bulbs, no vendor cloud, no account, no app, no flashing. This bulb is
-      <strong>Matter-certified</strong> — commission it straight into Home Assistant and stop.
+      There is no way to set these bulbs up without the vendor. There <em>is</em> a way to never
+      need it again — one afternoon of bootstrap, then the cloud gets firewalled off for good.
       Amazon <span class="asin">B0G6YFQDFW</span>
     </p>
     <div class="hero-meta">
@@ -265,16 +267,16 @@ footer p{max-width:74ch}
 
   <nav class="toc">
     <div class="toc-h">Contents</div>
-    <a href="#tldr">TL;DR — commission it</a>
-    <a href="#why">1 · Why we know it's Matter</a>
-    <a href="#sku">2 · 🚧 Which SKU?</a>
-    <a href="#myths">3 · Four myths</a>
-    <a href="#patha">4 · Matter commissioning ✅</a>
-    <a href="#network">5 · Network prerequisites</a>
-    <a href="#six">6 · Doing all six</a>
+    <a href="#tldr">TL;DR — the honest version</a>
+    <a href="#what">1 · What this bulb is</a>
+    <a href="#cloud">2 · The cloud accounting</a>
+    <a href="#path1">3 · hass-AiDot ✅</a>
+    <a href="#keys">4 · 🔴 Back up the keys</a>
+    <a href="#ips">5 · Manual IPs required</a>
+    <a href="#local">6 · Proving it's local</a>
     <a href="#ha">7 · What you get in HA</a>
-    <a href="#pathb">8 · If there's no Matter code</a>
-    <a href="#flash">9 · Flashing — ruled out</a>
+    <a href="#matter">8 · The Matter SKU</a>
+    <a href="#flash">9 · Flashing — last resort</a>
     <a href="#open">10 · Open questions</a>
     <a href="#credits">11 · Prior art</a>
   </nav>
@@ -282,20 +284,20 @@ footer p{max-width:74ch}
   <main>
 
     <section id="tldr">
-      <h2>TL;DR — commission them as Matter devices. That's it.</h2>
-      <p><strong>This bulb is Matter-certified.</strong> Home Assistant speaks Matter natively and
-      locally. There is no exploit to land, no OTA window to race, no UART pads to solder, no vendor
-      account to create.</p>
+      <h2>TL;DR — the honest version</h2>
 
-      <div class="note danger">
-        <div class="nh">🛑 Do not flash this bulb</div>
-        <p>The recommendation <em>inverts</em> relative to the usual cheap-Wi-Fi-bulb project:
-        flashing a Matter device is actively destructive. See <a href="#flash">§9</a>.</p>
+      <div class="note accent">
+        <div class="nh">There is no way to set these bulbs up without the vendor. There is a way to never need it again.</div>
+        <p>Getting a factory-fresh AiDot bulb onto your network requires AiDot's app and AiDot's
+        cloud, and no community tool replaces either. But once that one-time bootstrap is done, the
+        <strong><code>sulibot/hass-AiDot</code></strong> fork caches the per-device keys and keeps
+        working with the internet cut off. That end state is genuinely local — it just costs one
+        afternoon with a vendor account.</p>
       </div>
 
       <figure>
         <div class="diagram">
-          <svg viewBox="0 0 720 190" role="img" aria-label="Diagram: the bulb speaks Matter over WiFi and local IPv6 to the Matter Server add-on, which talks to Home Assistant, producing a light entity. No cloud in the path.">
+          <svg viewBox="0 0 720 210" role="img" aria-label="Diagram: a one-time bootstrap through the AiDot app and cloud issues per-device keys; afterwards Home Assistant talks directly to the bulbs over AES-encrypted TCP port 10000 with no cloud and no internet.">
             <defs>
               <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
@@ -306,451 +308,127 @@ footer p{max-width:74ch}
               </radialGradient>
             </defs>
 
-            <circle cx="82" cy="86" r="58" fill="url(#bulbglow)"/>
-            <path d="M82 40a26 26 0 0 0-15 47v7a5 5 0 0 0 5 5h20a5 5 0 0 0 5-5v-7a26 26 0 0 0-15-47z"
-                  fill="var(--gold)" stroke="var(--rule)" stroke-width="1.5"/>
-            <path d="M71 101h22v7a5 5 0 0 1-5 5h-12a5 5 0 0 1-5-5z" fill="var(--ink-faint)"/>
-            <text x="82" y="140" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600" fill="var(--ink)">Bulb ×6</text>
-            <text x="82" y="157" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-faint)">2.4 GHz</text>
+            <text x="150" y="20" text-anchor="middle" font-family="var(--mono)" font-size="10.5" font-weight="700" fill="var(--ink-faint)" letter-spacing="1.5">ONE TIME</text>
+            <text x="520" y="20" text-anchor="middle" font-family="var(--mono)" font-size="10.5" font-weight="700" fill="var(--good)" letter-spacing="1.5">FOREVER AFTER</text>
 
-            <g color="var(--accent)">
-              <line x1="150" y1="86" x2="272" y2="86" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
-            </g>
-            <text x="211" y="74" text-anchor="middle" font-family="var(--mono)" font-size="10.5" font-weight="600" fill="var(--accent)">Matter</text>
-            <text x="211" y="106" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--ink-faint)">IPv6 · mDNS</text>
+            <line x1="310" y1="32" x2="310" y2="190" stroke="var(--rule)" stroke-width="1" stroke-dasharray="5 5"/>
 
-            <rect x="284" y="55" width="146" height="62" rx="9" fill="var(--accent-wash)" stroke="var(--accent)" stroke-width="1.5"/>
-            <text x="357" y="80" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="620" fill="var(--ink)">Matter Server</text>
-            <text x="357" y="98" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">add-on</text>
+            <rect x="30" y="46" width="112" height="52" rx="9" fill="var(--bg-sunken)" stroke="var(--rule)" stroke-width="1.5"/>
+            <text x="86" y="68" text-anchor="middle" font-family="var(--sans)" font-size="12.5" font-weight="620" fill="var(--ink)">AiDot app</text>
+            <text x="86" y="85" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--ink-soft)">Wi-Fi creds</text>
 
-            <g color="var(--ink-faint)">
-              <line x1="440" y1="86" x2="516" y2="86" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
-            </g>
+            <rect x="162" y="46" width="112" height="52" rx="9" fill="var(--danger-wash)" stroke="var(--danger-rule)" stroke-width="1.5"/>
+            <text x="218" y="68" text-anchor="middle" font-family="var(--sans)" font-size="12.5" font-weight="620" fill="var(--ink)">AiDot cloud</text>
+            <text x="218" y="85" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--danger)">issues keys</text>
 
-            <rect x="528" y="55" width="160" height="62" rx="9" fill="var(--bg-sunken)" stroke="var(--rule)" stroke-width="1.5"/>
-            <text x="608" y="80" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="620" fill="var(--ink)">Home Assistant</text>
-            <text x="608" y="98" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--good)">light.* entity</text>
+            <g color="var(--ink-faint)"><line x1="142" y1="72" x2="156" y2="72" stroke="currentColor" stroke-width="1.8" marker-end="url(#ar)"/></g>
 
-            <g color="var(--danger)">
-              <line x1="357" y1="46" x2="357" y2="22" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4"/>
-            </g>
-            <text x="376" y="20" font-family="var(--sans)" font-size="12" font-weight="620" fill="var(--danger)">no cloud · no account · no app</text>
+            <path d="M86 106 L86 128 L218 128 L218 106" fill="none" stroke="var(--good)" stroke-width="1.6"/>
+            <text x="152" y="147" text-anchor="middle" font-family="var(--sans)" font-size="11" font-weight="620" fill="var(--good)">back up the keys,</text>
+            <text x="152" y="162" text-anchor="middle" font-family="var(--sans)" font-size="11" font-weight="620" fill="var(--good)">then firewall it off</text>
+            <text x="152" y="180" text-anchor="middle" font-family="var(--sans)" font-size="11" fill="var(--ink-faint)">for good</text>
 
-            <text x="608" y="140" text-anchor="middle" font-family="var(--sans)" font-size="12" fill="var(--ink-soft)">works with the WAN unplugged</text>
+            <rect x="342" y="46" width="152" height="52" rx="9" fill="var(--bg-sunken)" stroke="var(--rule)" stroke-width="1.5"/>
+            <text x="418" y="68" text-anchor="middle" font-family="var(--sans)" font-size="12.5" font-weight="620" fill="var(--ink)">Home Assistant</text>
+            <text x="418" y="85" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--ink-soft)">hass-AiDot</text>
+
+            <g color="var(--accent)"><line x1="500" y1="72" x2="588" y2="72" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/></g>
+            <text x="544" y="62" text-anchor="middle" font-family="var(--mono)" font-size="9.5" font-weight="600" fill="var(--accent)">AES</text>
+            <text x="544" y="90" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">TCP :10000</text>
+
+            <circle cx="640" cy="72" r="42" fill="url(#bulbglow)"/>
+            <path d="M640 42a19 19 0 0 0-11 34v5a3.5 3.5 0 0 0 3.5 3.5h15a3.5 3.5 0 0 0 3.5-3.5v-5a19 19 0 0 0-11-34z"
+                  fill="var(--gold)" stroke="var(--rule)" stroke-width="1.3"/>
+            <path d="M632 84h16v5a3.5 3.5 0 0 1-3.5 3.5h-9a3.5 3.5 0 0 1-3.5-3.5z" fill="var(--ink-faint)"/>
+            <text x="640" y="112" text-anchor="middle" font-family="var(--sans)" font-size="12" font-weight="600" fill="var(--ink)">Bulb ×6</text>
+
+            <text x="520" y="147" text-anchor="middle" font-family="var(--sans)" font-size="11.5" font-weight="620" fill="var(--good)">no cloud · no internet</text>
+            <text x="520" y="166" text-anchor="middle" font-family="var(--sans)" font-size="11" fill="var(--ink-faint)">works with the WAN unplugged</text>
           </svg>
         </div>
-        <figcaption>The whole control path stays inside the LAN. Nothing traverses a vendor server.</figcaption>
+        <figcaption>The vendor owns your setup day — not your next five years.</figcaption>
       </figure>
 
-      <h3>Primary-source proof</h3>
-      <p>CSA certified-products database, <em>"Consciot Smart Light Bulb"</em>:</p>
-      <div class="tw">
-      <table>
-        <tbody>
-          <tr><th>Company</th><td><strong>AiDot Inc.</strong></td></tr>
-          <tr><th>Vendor ID (VID)</th><td><strong><code>0x1396</code></strong></td></tr>
-          <tr><th>Product ID (PID)</th><td><strong><code>0x11BA</code></strong></td></tr>
-          <tr><th>Certification ID</th><td><strong>CSA2609OMAT49756-24</strong></td></tr>
-          <tr><th>Certified</th><td><strong>2026-01-30</strong></td></tr>
-          <tr><th>Matter spec</th><td><strong>1.5</strong></td></tr>
-          <tr><th>Transport</th><td><strong>Wi-Fi + Bluetooth</strong> (BLE carries commissioning)</td></tr>
-          <tr><th>Device type</th><td><strong>Extended Color Light</strong> (<code>0x010D</code>)</td></tr>
-          <tr><th>Family SKU</th><td><code>LS0102603211A</code> / <code>CS01271101</code></td></tr>
-        </tbody>
-      </table>
-      </div>
+      <h3>The five steps</h3>
+      <ol class="steps">
+        <li>Onboard all six bulbs once in the <strong>AiDot app</strong>, using a <strong>throwaway account</strong>.</li>
+        <li>Install <strong><code>sulibot/hass-AiDot</code></strong> via HACS and log in <strong>once</strong>.</li>
+        <li><strong>Back up each bulb's <code>deviceId</code> + <code>password</code> + <code>aesKey</code></strong> — the step that makes the rest permanent.</li>
+        <li>Give every bulb a <strong>static IP / DHCP reservation</strong> and configure it <strong>manually</strong> (<a href="#ips">required — §5</a>).</li>
+        <li><strong>Firewall the bulbs and Home Assistant outbound</strong>, and confirm control survives a restart.</li>
+      </ol>
 
-      <p>Corroboration: AiDot holds <strong>136 Matter 1.5 certifications</strong> for smart lighting.
-      Consciot, Linkind and OREiN are all AiDot brands, and all three have Matter bulb entries in the
-      CSA database.</p>
-
-      <div class="note warn">
-        <div class="nh">🚧 One open item — and it's the only thing that changes the recommendation</div>
-        <p>Consciot ships two parallel SKU lines, and this exact ASIN is new enough that its listing
-        could not be read directly. <a href="#sku">§2</a> has three tests that settle it in under a
-        minute.</p>
+      <div class="note good">
+        <div class="nh">💡 Buying rather than already owning?</div>
+        <p>AiDot sells an explicitly <strong>Matter-certified</strong> Consciot SKU that commissions
+        natively into Home Assistant with no app, no account and no cloud at all. It is strictly
+        better and costs about the same. See <a href="#matter">§8</a>.</p>
       </div>
     </section>
 
-    <section id="why">
-      <h2>1. Why we know it's Matter</h2>
+    <section id="what">
+      <h2>1. What this bulb actually is</h2>
+      <p><strong>Brand:</strong> Consciot, a brand of <strong>AiDot Inc.</strong> Sibling brands
+      include <strong>Linkind</strong>, <strong>OREiN</strong> and <strong>Winees</strong>. The app is
+      <strong>AiDot</strong>.</p>
+      <p><strong>Manufacturer:</strong> the A19 manual names <strong>Leedarson IoT Technology Inc.</strong>
+      (Xiamen) as producer, with Spring Sunshine Technology Co., Ltd (HK) as importer of record.
+      Leedarson is a tier-1 lighting ODM that builds for major brands (FCC grantee codes
+      <code>2AB2Q</code>, <code>2AVZB</code>). AiDot's own FCC grantee code is <code>2BLWS</code>.</p>
 
-      <p><strong>The CSA certificate above is a primary source</strong> — not an inference, not a
-      listing claim. A Matter certification is issued per product, carries a vendor ID assigned to a
-      real company, and is publicly queryable. AiDot Inc. holds VID <code>0x1396</code> in its own name.</p>
-
-      <p><strong>The manufacturing chain is a tier-1 ODM, not a white-label shop.</strong> The
-      Consciot A19 manual names <strong>Leedarson IoT Technology Inc.</strong> (Xiamen) as producer —
-      a tier-1 lighting ODM that builds for major brands (FCC grantee codes <code>2AB2Q</code>,
-      <code>2AVZB</code>). AiDot's own FCC grantee code is <code>2BLWS</code>.</p>
-
-      <h3>It is definitively not Tuya</h3>
-      <p>This matters because the toolchain most people reach for first —
-      <code>tuya-cloudcutter</code>, <code>tuya-convert</code>, LocalTuya — is keyed to Tuya's
-      firmware and cloud:</p>
+      <h3>It is not Tuya — do not reach for the Tuya toolchain</h3>
+      <p>This is the single most common wrong turn, because "cheap Wi-Fi RGB bulb" pattern-matches to
+      Tuya:</p>
       <ul>
         <li><strong>Zero hits for "Consciot"</strong> across all <strong>1,149 device profiles</strong>
         in the <code>tuya-cloudcutter</code> device database.</li>
-        <li>AiDot holds its <strong>own CSA Vendor ID</strong> and ships its <strong>own app</strong>.
+        <li>AiDot holds its <strong>own CSA vendor ID</strong> and ships its <strong>own app</strong>.
         A Tuya OEM would appear under Tuya's VID and the Smart Life app.</li>
-        <li>⇒ Tuya tooling <strong>does not apply</strong>, and a Tuya <code>local_key</code> is
-        something an AiDot device has no way to possess.</li>
+        <li>⇒ <code>tuya-convert</code>, <code>tuya-cloudcutter</code> and <strong>LocalTuya do not
+        apply.</strong> A Tuya <code>local_key</code> is something an AiDot device has no way to
+        possess, and cloudcutter attacks a Tuya activation handshake that simply isn't present.</li>
       </ul>
+      <p>If you already run LocalTuya, that makes it a <em>more</em> tempting wrong turn, not a less one.</p>
 
-      <h3>Why the box copy corroborates it</h3>
-      <p>"Works with Apple Home" on a budget Wi-Fi bulb effectively requires Matter. The only
-      pre-Matter route to Apple Home was HomeKit-native (HAP over Wi-Fi), which required per-device
-      <strong>MFi certification</strong> — a licensing and hardware-attestation burden a no-name ODM
-      selling six bulbs for the price of one Hue does not carry. Alexa and Google both have
-      cloud-to-cloud paths any vendor can implement; Apple Home does not. "<strong>&amp;
-      SmartThings</strong>" is the same tell, and in AiDot's catalogue that phrase appears only on
-      Matter SKUs.</p>
-    </section>
-
-    <section id="sku">
-      <h2>2. 🚧 Which SKU do you have?</h2>
-      <p><span class="badge b-wip">🚧 OWNER CONFIRMING</span> &nbsp;Consciot ships a Matter line
-      <em>and</em> a legacy non-Matter Wi-Fi line. The CSA record proves <em>a</em> Consciot A19 is
-      Matter-certified; confirming that <strong>your</strong> box is that SKU takes under a minute.
-      Three independent tests, any one of which settles it.</p>
-
-      <h3>Test 1 — the Matter setup code (easiest, needs nothing)</h3>
-      <p>Look on the <strong>bulb itself</strong> (usually printed on the plastic diffuser skirt near
-      the base) and on the box for:</p>
-      <ul>
-        <li>the <strong>Matter logo</strong> — three interlocking arrows forming a triangle</li>
-        <li>a <strong>QR code</strong>, and/or an <strong>11-digit numeric setup code</strong>
-        formatted <code>1234-567-8901</code></li>
-      </ul>
+      <h3>It is not Matter either — and here is why that took some pinning down</h3>
       <div class="note good">
-        <div class="nh">Present → it is Matter. Done.</div>
-        <p>No teardown, no chip ID, nothing else needed. A non-Matter AiDot bulb has no such code. If
-        the model number resembles <code>LS0102603211A</code> / <code>CS01271101</code>, that is
-        further confirmation.</p>
+        <div class="nh">✅ Settled by the physical packaging</div>
+        <p>The owner has the box: <strong>no Matter logo, no QR, no 11-digit setup code.</strong> That
+        is decisive.</p>
       </div>
-
-      <h3>Test 2 — a BLE scan (decisive, works without the box)</h3>
-      <p>A Matter device in commissioning mode advertises over BLE with <strong>service UUID
-      <code>0xFFF6</code></strong>, and the payload encodes the discriminator, <strong>Vendor ID and
-      Product ID</strong>. This discriminates every remaining hypothesis at once:</p>
-
-      <pre><code>sudo btmgmt find -l                  <span class="cmt"># LE scan — look for UUID FFF6 in the AD data</span>
-<span class="cmt"># or</span>
-bluetoothctl --timeout 20 scan le     <span class="cmt"># then: bluetoothctl info &lt;address&gt;</span></code></pre>
-
-      <div class="tw">
-      <table>
-        <thead><tr><th>Scan result</th><th>Verdict</th></tr></thead>
-        <tbody>
-          <tr><td>Advert with <strong>UUID <code>0xFFF6</code></strong></td><td><strong>Matter.</strong> The payload's VID should read <strong><code>0x1396</code> = AiDot</strong>, confirming the SKU too</td></tr>
-          <tr><td>Advert with <strong>Tuya manufacturer data</strong>, no <code>0xFFF6</code></td><td>Tuya BLE-assisted → not Matter (and not expected here)</td></tr>
-          <tr><td><strong>No BLE advertising at all</strong></td><td>Legacy Wi-Fi SmartConfig bulb → not Matter → <a href="#pathb">§8</a></td></tr>
-        </tbody>
-      </table>
-      </div>
-
-      <div class="note">
-        <div class="nh">⏱️ Power-cycle the bulb immediately before scanning</div>
-        <p>Many implementations advertise only during a ~15-minute commissioning window after
-        power-up; a bulb that has been powered for hours may have gone quiet. Any phone BLE scanner
-        (nRF Connect, LightBlue) works equally well.</p>
-      </div>
-
-      <h3>Test 3 — ask Apple Home (zero setup)</h3>
-      <p>Open <strong>Apple Home</strong> → <em>Add Accessory</em> → <strong>Matter</strong>. If the
-      bulb appears, it is Matter — Apple Home is the one ecosystem in the packaging list that a
-      non-Matter budget bulb cannot possibly join.</p>
-
+      <p>It is worth recording why the paper trail pointed the other way, because the next person will
+      hit the same trap:</p>
+      <ul>
+        <li>AiDot holds <strong>136 Matter 1.5 certifications</strong>, and there <em>is</em> a CSA
+        certificate for a product named "Consciot Smart Light Bulb" (AiDot Inc., VID <code>0x1396</code>).</li>
+        <li><strong>A CSA certificate binds a product family, not an ASIN.</strong> Consciot ships a
+        Matter line <em>and</em> a legacy Wi-Fi line side by side. A certificate existing under the
+        brand does not mean the box in your hand is the certified variant.</li>
+        <li>The four-ecosystem box copy ("Apple Home … SmartThings") is <em>suggestive</em> of Matter
+        but not conclusive at the SKU level.</li>
+      </ul>
       <div class="note accent">
-        <div class="nh">Path selector</div>
-        <p>Code / <code>0xFFF6</code> / Apple Home present → <a href="#patha"><strong>Path A</strong></a>.
-        Definitively absent → <a href="#pathb"><strong>Path B</strong></a>.</p>
+        <div class="nh">The lesson</div>
+        <p>For this vendor, brand-level and certification-level evidence cannot resolve a SKU-level
+        question. Only the physical box can. If you are documenting one of these, look at the carton
+        before building an argument.</p>
       </div>
+
+      <h3>One more myth worth killing</h3>
+      <p><strong>"It broadcasts no setup Wi-Fi network, so it must be Tuya SmartConfig."</strong> No.
+      AiDot provisioning is <strong>BLE-assisted</strong> — the app talks to the bulb over Bluetooth
+      and hands it Wi-Fi credentials. No SoftAP is expected, and its absence tells you nothing about
+      Tuya either way.</p>
+      <p>That detail also explains why no community provisioning tool exists: reverse-engineering a
+      BLE pairing flow is a substantially harder target than an HTTP-to-a-setup-AP flow. Don't expect
+      an "AiDotTools" to appear.</p>
     </section>
 
-    <section id="myths">
-      <h2>3. Four myths that send people the wrong way</h2>
-      <p>Each of these has sent someone down a dead end on this exact device.</p>
-      <div class="tw">
-      <table>
-        <thead><tr><th>Myth</th><th>Reality</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><em>"It works with the AiDot app, so it isn't Matter."</em></td>
-            <td><strong>False.</strong> AiDot's Matter bulbs work with the AiDot app <em>too</em>. A vendor app is not evidence against Matter — and AiDot Inc. is the company on the Matter certificate.</td>
-          </tr>
-          <tr>
-            <td><em>"It's a Wi-Fi bulb, so it isn't Matter."</em></td>
-            <td><strong>False.</strong> Matter runs <em>over</em> Wi-Fi. Matter-over-Wi-Fi and Matter-over-Thread are both Matter; this is the Wi-Fi kind.</td>
-          </tr>
-          <tr>
-            <td><em>"It broadcasts no setup Wi-Fi network, so it's a Tuya SmartConfig bulb."</em></td>
-            <td><strong>Backwards.</strong> <strong>Matter devices never broadcast a SoftAP</strong> — commissioning happens over BLE, then the device is handed Wi-Fi credentials. No AP is <em>consistent with</em> Matter. It rules out Tuya <strong>AP mode</strong> specifically, and nothing else.</td>
-          </tr>
-          <tr>
-            <td><em>"Cheap Wi-Fi bulb ⇒ Tuya ⇒ use cloudcutter."</em></td>
-            <td><strong>False here.</strong> Zero Consciot profiles in 1,149. Wrong vendor entirely — see <a href="#why">§1</a>.</td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-    </section>
+    <section id="cloud">
+      <h2>2. The cloud accounting, stated plainly</h2>
+      <p>Two separate claims. Keeping them apart is the whole story.</p>
 
-    <section id="patha">
-      <h2>4. Path A — Matter commissioning <span class="badge b-ok">✅ RECOMMENDED</span></h2>
-
-      <h3>What you need</h3>
-      <div class="tw">
-      <table>
-        <tbody>
-          <tr><th>Home Assistant</th><td>Any modern release. HAOS or Supervised is the easy road.</td></tr>
-          <tr><th>Matter Server</th><td>The <strong>Matter Server</strong> add-on, plus the <strong>Matter</strong> integration. Two clicks on HAOS.</td></tr>
-          <tr><th>A way to reach the bulb over BLE</th><td>Either an existing <strong>ESPHome/Shelly BLE proxy</strong> (best — see below) or a phone with the HA Companion app.</td></tr>
-          <tr><th>2.4 GHz Wi-Fi</th><td>The bulb is 2.4 GHz-only. See <a href="#network">§5</a>.</td></tr>
-          <tr><th>IPv6 on the LAN</th><td><strong>Non-negotiable.</strong> See §5 — the #1 cause of Matter failures.</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <p>You do <strong>not</strong> need: a Thread border router (this is Wi-Fi Matter), a hub, a
-      bridge, an AiDot account, the vendor app, or an internet connection.</p>
-
-      <h3>⭐ The good option: phone-free commissioning via BLE proxy</h3>
-      <p><strong>Matter Server add-on ≥ 8.5.0 can commission through Home Assistant's own Bluetooth
-      stack</strong>, including <strong>ESPHome and Shelly BLE proxies</strong>. If you already run
-      BLE proxies for Bluetooth sensors, you have everything you need — and for six identical bulbs
-      this turns six phone dances into six paste-a-code-in-the-UI operations.</p>
-      <ol>
-        <li><strong>Settings → Add-ons → Matter Server → Configuration</strong> → enable
-        <strong><code>ble_proxy</code></strong> ("Enable BLE proxy"). Leave <code>beta</code> off
-        unless the toggle is missing. <strong>Take a backup first</strong> — 9.x migrates its data
-        store on first start.</li>
-        <li>Restart the add-on.</li>
-      </ol>
-      <div class="note">
-        <div class="nh">Mutually exclusive</div>
-        <p>BLE-proxy mode and a local Bluetooth adapter are mutually exclusive. If HA has a USB
-        Bluetooth dongle configured, the proxy path takes precedence anyway.</p>
-      </div>
-
-      <h3>Commission bulb #1</h3>
-      <ol>
-        <li>Screw in <strong>one</strong> bulb, powered on, <strong>within BLE range of a proxy</strong>.
-        Factory-fresh bulbs enter pairing mode automatically.</li>
-        <li><strong>Settings → Devices &amp; Services → Matter → Add device.</strong></li>
-        <li>Choose <strong>"No, it's new."</strong></li>
-        <li>Enter the <strong>11-digit setup code</strong> (or scan the QR). HA will ask for the
-        <strong>Wi-Fi SSID and password</strong> to hand the bulb over BLE.</li>
-        <li>Wait — commissioning takes a couple of minutes.</li>
-        <li>Name it and finish.</li>
-      </ol>
-
-      <div class="note warn">
-        <div class="nh">⚠️ Step 4 decides which network the bulb lands on</div>
-        <p>If you run a separate IoT network, give it <em>that</em> SSID. Getting this wrong is the
-        main way to end up with a bulb on the wrong segment and an unexplained "commissioned but
-        offline" bulb.</p>
-      </div>
-
-      <h3>🛑 Verify bulb #1 before doing the other five</h3>
-      <p>Do not commission all six and <em>then</em> discover a problem. Confirm:</p>
-      <ul>
-        <li>The <code>light.*</code> entity appears and responds to on/off, brightness, <strong>and color</strong>.</li>
-        <li>The bulb picked up an address on the network segment you intended.</li>
-        <li><strong>It survives a power-cycle plus five minutes and comes back online by itself.</strong></li>
-      </ul>
-      <div class="note danger">
-        <div class="nh">That last one is the real test — and it's easy to skip</div>
-        <p>Commissioning succeeding only proves the BLE path worked. <strong>Coming back after a
-        power-cycle is what proves mDNS and IPv6 discovery work on that segment.</strong> A bulb that
-        commissions and then never returns is the single most common Matter failure, and you would
-        much rather find it on bulb one than bulb six.</p>
-      </div>
-
-      <h3>If BLE proxy commissioning misbehaves</h3>
-      <p><strong>Phone flow:</strong> HA Companion app → Settings → Matter → Add device → "No, it's
-      new." Requires Android 8.1+ (12+ recommended, Location set to "Allow all the time") or iOS 16+.
-      <strong>The phone must be joined to the target 2.4 GHz network during commissioning</strong> —
-      Android's commissioner hands the device the phone's <em>current</em> Wi-Fi credentials. Move the
-      phone back afterwards.</p>
-
-      <p><strong>If HA can't do BLE at all — the network-commissioning trick:</strong> commission into
-      <strong>Apple Home</strong> first (iPhone scans the QR; the phone must be on the target network),
-      then in Apple Home use <strong>Share / Add to other ecosystem</strong> to generate a fresh setup
-      code. In HA choose <strong>"Yes, it's already in use."</strong> HA then commissions
-      <strong>over the network</strong> — no BLE needed at all, because the bulb is already on Wi-Fi.
-      Matter's multi-fabric support means the bulb lives in both ecosystems simultaneously, and
-      <strong>it stays fully local in HA either way.</strong></p>
-
-      <div class="note accent">
-        <div class="nh">Fabric budget</div>
-        <p>Matter devices support a limited number of simultaneous fabrics — commonly <strong>5</strong>.
-        Each ecosystem you add consumes one. For an all-local setup, use exactly one: Home Assistant.
-        If you want Siri too, add Apple Home as a second and stop there.</p>
-      </div>
-    </section>
-
-    <section id="network">
-      <h2>5. Network prerequisites (the part that actually bites)</h2>
-      <p>Matter commissioning failures are almost never the bulb. They are almost always one of these three.</p>
-
-      <h3>5.1 IPv6 is mandatory — the #1 failure cause</h3>
-      <div class="note danger">
-        <div class="nh">⚠️ Matter's operational transport is IPv6-only</div>
-        <p>There is no IPv4 fallback. If IPv6 is disabled on the segment — a very common "hardening"
-        choice on IoT networks — commissioning can appear to succeed and the device is then
-        permanently unreachable.</p>
-      </div>
-      <ul>
-        <li><strong>Link-local (<code>fe80::/10</code>) is sufficient</strong> when commissioner and
-        device share an L2 segment. No global prefix, ULA, or ISP delegation required.</li>
-        <li><strong>Router Advertisements</strong> should reach the segment.</li>
-        <li><strong>MLD snooping</strong> must either work correctly or be switched off. Broken MLD
-        snooping silently eats the IPv6 multicast that Matter's mDNS depends on — a genuinely nasty
-        failure mode, because everything else on the network looks fine.</li>
-      </ul>
-
-      <h3>5.2 mDNS must reach Home Assistant</h3>
-      <pre><code>avahi-browse -rt _matterc._udp    <span class="cmt"># commissionable (not yet paired)</span>
-avahi-browse -rt _matter._tcp     <span class="cmt"># already commissioned</span></code></pre>
-      <ul>
-        <li><strong>Simplest and most reliable:</strong> put the bulbs on the <strong>same L2 segment
-        as Home Assistant</strong>. If your HA host is multi-homed with a real NIC on the IoT segment,
-        you already satisfy this — no mDNS reflector, no IPv6 ULA plumbing, no firewall holes.</li>
-        <li><strong>Separate IoT VLAN, HA not present on it:</strong> you need an <strong>mDNS
-        reflector / Avahi repeater</strong> bridging both segments <strong>for IPv6 as well as
-        IPv4</strong>, plus firewall rules for Matter operational traffic. Many reflectors default to
-        IPv4-only — which reflects just enough for the device to be <em>discovered</em> and not enough
-        for it to <em>work</em>.</li>
-        <li><strong>Host networking:</strong> the Matter Server container needs host network mode to
-        see multicast. The stock HAOS add-on is correct out of the box; hand-rolled Docker setups are
-        what break here.</li>
-        <li><strong>On the AP:</strong> check <strong>multicast / IGMP-MLD snooping</strong> and
-        <strong>client isolation</strong> on the IoT SSID. Aggressive isolation can drop the multicast
-        Matter needs.</li>
-      </ul>
-
-      <div class="note">
-        <div class="nh">Interface selection on multi-NIC hosts</div>
-        <p>Older guidance about a <code>--primary-interface</code> flag is from the
-        python-matter-server era. Add-on 9.x is the matter.js rewrite, which normally binds
-        <strong>all</strong> interfaces — which is what you want. <strong>Do not set it
-        speculatively.</strong> If, and only if, bulbs commission but then show offline, that is the
-        knob to investigate.</p>
-      </div>
-
-      <h3>5.3 2.4 GHz band steering</h3>
-      <p>The bulb is 2.4 GHz-only. (The CSA family entry confusingly says "dual-band 2.4G and 5G"; the
-      product listings say 2.4 GHz.) If your SSID is a single band-steered name, the credential handoff
-      can succeed while the join fails — the bulb is handed an SSID it cannot find on a band it can hear.</p>
-      <ol>
-        <li>Use a <strong>dedicated 2.4 GHz SSID</strong> (an IoT SSID is the clean answer).</li>
-        <li>Or temporarily disable the 5 GHz radio during commissioning.</li>
-        <li>Or move phone and bulb close to the AP.</li>
-      </ol>
-    </section>
-
-    <section id="six">
-      <h2>6. Doing all six</h2>
-      <p>There is no bulk-commission mechanism in Matter — each bulb needs its own code, so it is six
-      runs at roughly 2–3 minutes each.</p>
-      <ol>
-        <li><strong>Do them on a bench first, before installing.</strong> One lamp or a bare socket
-        adapter. Screw in → photograph the code → commission → rename → unscrew → next.</li>
-        <li><strong>Rename each entity as you go</strong>, while you still know which physical bulb it
-        is. Name them for <em>where they are going</em> — <code>light.kitchen_can_1</code> — not for
-        what they are.</li>
-        <li><strong>Label the bulbs physically.</strong> A marker dot on the base matching the HA name
-        saves a real diagnostic afternoon later.</li>
-        <li><strong>Group them:</strong></li>
-      </ol>
-
-      <pre><code><span class="cmt"># configuration.yaml</span>
-light:
-  - platform: group
-    name: "Consciot Bulbs"
-    entities:
-      - light.kitchen_can_1
-      - light.kitchen_can_2
-      - light.kitchen_can_3</code></pre>
-
-      <div class="note warn">
-        <div class="nh">📸 Photograph every setup code before you install</div>
-        <p>The Matter setup code is printed <strong>on the bulb itself</strong>, and becomes
-        permanently unreadable the moment it is screwed into a recessed can or a globe fixture.
-        <em>"If you reset your device you'll need the QR code or numeric setup code to commission that
-        device again."</em> Losing it does not brick the bulb, but re-commissioning means taking the
-        fixture apart.</p>
-        <p><strong>Treat those photos as secrets.</strong> A setup code is a commissioning credential:
-        anyone with the code, in radio range of an uncommissioned bulb, can join it to <em>their</em>
-        fabric. Never commit them, never post them in a screenshot.</p>
-      </div>
-
-      <p><strong>Sending one command to six bulbs is six unicast messages.</strong> Matter over Wi-Fi
-      has no broadcast group primitive here, so a group turn-on is inherently a little staggered —
-      usually imperceptible, occasionally a visible ripple on a congested 2.4 GHz band. The fix is RF
-      conditions, not HA config.</p>
-    </section>
-
-    <section id="ha">
-      <h2>7. What you get in Home Assistant</h2>
-      <p>Device type <code>0x010D</code> <strong>Extended Color Light</strong> — the exact type that
-      maps to brightness + RGB + color temperature — yields one <code>light.*</code> entity per bulb:</p>
-
-      <div class="tw">
-      <table>
-        <thead><tr><th>Capability</th><th>Exposed as</th></tr></thead>
-        <tbody>
-          <tr><td>On / off</td><td><code>light.turn_on</code> / <code>light.turn_off</code></td></tr>
-          <tr><td>Brightness</td><td><code>brightness</code> (0–255); <code>supported_color_modes</code> includes <code>hs</code>/<code>xy</code></td></tr>
-          <tr><td>Full RGB color</td><td><code>rgb_color</code> / <code>hs_color</code> / <code>xy_color</code></td></tr>
-          <tr><td>Tunable white</td><td><code>color_temp_kelvin</code>, ~<strong>2700 K – 6500 K</strong></td></tr>
-          <tr><td>Transitions</td><td><code>transition</code>, per the Matter Level Control cluster</td></tr>
-          <tr><td>Firmware updates</td><td>Possibly an <code>update.*</code> entity — Matter 1.5 with DCL enabled can surface OTA</td></tr>
-        </tbody>
-      </table>
-      </div>
-
-      <p>Plus a device entry showing vendor <strong>AiDot Inc.</strong>, model, serial and firmware
-      version. Commissioning one bulb and reading <code>0x1396</code> on its device page verifies
-      identity <em>and</em> proves the end state works, in a single step.</p>
-
-      <div class="note good">
-        <div class="nh">No cloud. No account. No vendor app. No internet dependency.</div>
-        <p>Matter operational traffic is local IPv6 between Home Assistant and the bulbs.</p>
-      </div>
-
-      <h3>What you give up versus the vendor app</h3>
-      <p>Music-sync / microphone reactivity and vendor "scenes" are not Matter clusters, so they will
-      not appear in HA. What you get back is a light that works when the internet doesn't, responds in
-      milliseconds instead of via a round-trip to someone's cloud, and cannot be deprecated out from
-      under you. Rebuilding a candle flicker as an HA script is an afternoon; recovering an abandoned
-      cloud bulb is not possible at all.</p>
-
-      <h3>Proving it is really local</h3>
-      <ol>
-        <li><strong>Block the bulbs at the firewall</strong> — deny them all WAN egress.</li>
-        <li><strong>Toggle from HA.</strong> Should work, instantly and unchanged.</li>
-        <li><strong>Harder version:</strong> unplug the WAN entirely. HA → bulb must still work.</li>
-        <li><strong>Watch what they phone.</strong> A Matter bulb on a local fabric should be near-silent.</li>
-      </ol>
-      <p>Then leave the block in place permanently. There is no feature on the far side of it that you want.</p>
-    </section>
-
-    <section id="pathb">
-      <h2>8. Path B — if there is no Matter code</h2>
-      <p><strong>Only if <a href="#sku">§2</a> comes back definitively negative</strong> — no setup
-      code, no <code>0xFFF6</code> advert, and Apple Home refuses it. That means the legacy AiDot Wi-Fi SKU.</p>
-
-      <div class="note danger">
-        <div class="nh">Do not reach for LocalTuya</div>
-        <p>It is the tempting wrong turn, especially if you already have a <code>localtuya</code>
-        install. Consciot is AiDot, not Tuya; these devices do not speak the Tuya local protocol and
-        will not yield to Tuya local-key extraction.</p>
-      </div>
-
-      <h3>The bootstrap needs the vendor. The end state does not.</h3>
-      <p>These are two different claims, and keeping them apart is the whole story of this branch.</p>
-      <p><strong>Getting a factory-fresh bulb running requires AiDot's cloud — twice, unavoidably:</strong></p>
+      <h3>The bootstrap requires the vendor — twice, unavoidably</h3>
       <div class="tw">
       <table>
         <thead><tr><th>Half</th><th>What it does</th><th>Community replacement?</th></tr></thead>
@@ -760,35 +438,32 @@ light:
         </tbody>
       </table>
       </div>
-      <p>There is <strong>no "AiDotTools" analogue</strong> to the reverse-engineered tooling that
-      exists for some other vendors. Nobody has reverse-engineered AiDot <em>provisioning</em>, and no
-      library derives the local <code>aesKey</code> independently of the cloud. Because provisioning is
-      BLE-assisted rather than a SoftAP HTTP flow, it is a substantially harder reverse-engineering
-      target — likely why no such tool exists, and a reason not to expect one soon.</p>
+      <p>Nobody has reverse-engineered AiDot provisioning, and no library derives the local
+      <code>aesKey</code> independently of the cloud. The closest public artifact is the protocol
+      documentation inside <code>sulibot/hass-AiDot</code>, which documents the <em>control</em>
+      protocol while explicitly sourcing the keys <strong>from the cloud</strong>.</p>
 
+      <h3>The end state does not</h3>
+      <p>Once the keys are cached locally, the fork keeps running without them being re-issued.
+      Control is <strong>AES-encrypted TCP on port 10000</strong>, device-to-HA, no internet involved.
+      Cut the WAN and the lights still work.</p>
       <div class="note good">
-        <div class="nh">✅ But once bootstrapped, a genuine no-cloud end state is reachable</div>
-        <p>With the <strong>community fork</strong> specifically:</p>
-        <ol>
-          <li>Onboard all six bulbs once in the AiDot app, using a <strong>throwaway account</strong>.
-          The app is unavoidable; your real identity is not.</li>
-          <li>Install <strong><code>sulibot/hass-AiDot</code></strong> via HACS and log in
-          <strong>once</strong>. It persists each device's <code>aesKey</code> + <code>password</code>
-          into Home Assistant's config entry.</li>
-          <li><strong>Back up those credentials</strong> — the step that makes the rest permanent.</li>
-          <li><strong>Firewall the bulbs <em>and</em> Home Assistant outbound.</strong></li>
-          <li>The lights keep working. The fork degrades gracefully — <em>"using cached login info"</em>
-          — instead of demanding the cloud it can no longer reach.</li>
-        </ol>
-        <p>That is a real no-cloud end state, not a permanent tether. It costs one vendor account and
-        one bootstrap you can never repeat if you lose the keys.</p>
+        <div class="nh">So: the vendor owns your setup day, not your next five years</div>
+        <p>Provided you complete <a href="#keys">§4</a>.</p>
       </div>
+    </section>
 
-      <h3>The two integrations diverge on exactly the axis that matters</h3>
-      <p>Both require an AiDot account and one-time onboarding in the AiDot app. After that:</p>
+    <section id="path1">
+      <h2>3. Path 1 — <code>hass-AiDot</code> <span class="badge b-ok">✅ RECOMMENDED</span></h2>
+
+      <h3>Why the community fork and not the official integration</h3>
+      <p>Home Assistant has a built-in <strong><code>aidot</code></strong> integration (core, 2026.6+).
+      It is easier to install and perfectly fine while AiDot is alive. It is also the wrong choice for
+      a setup meant to outlive the vendor:</p>
+
       <div class="tw">
       <table>
-        <thead><tr><th></th><th>Official <code>aidot</code> (HA core, 2026.6+)</th><th>Community <code>sulibot/hass-AiDot</code></th></tr></thead>
+        <thead><tr><th></th><th>Official <code>aidot</code> (HA core)</th><th>Community <code>sulibot/hass-AiDot</code></th></tr></thead>
         <tbody>
           <tr><th>Control transport</th><td>Persistent <strong>TCP</strong> connection per device</td><td>AES-encrypted <strong>TCP :10000</strong></td></tr>
           <tr><th>Discovery</th><td>—</td><td>UDP <strong>:6666</strong> broadcast (<em>discovery only</em>)</td></tr>
@@ -801,132 +476,268 @@ light:
         </tbody>
       </table>
       </div>
-      <p><strong>That fourth row is the entire decision.</strong> The official integration is easier
-      to install and perfectly fine while AiDot is alive — but on the day the vendor's auth endpoint
-      stops answering, it raises a config error and stops loading, and your lights go with it. That is
-      precisely the Sengled-style cloud death, reproduced in an integration. The fork keeps running on
-      cached credentials. <strong>Prefer the fork</strong>, even though it is the harder install.</p>
-
-      <div class="note warn">
-        <div class="nh">🚧 The one test that settles it — and it is not yet verified</div>
-        <p>Neither project's marketing should be taken on faith. <strong>Firewall the bulbs <em>and</em>
-        Home Assistant off the internet, restart Home Assistant, and confirm control still works.</strong>
-        A restart is essential: it is what proves credentials were <em>persisted</em> rather than merely
-        held in memory since login. This is the falsifiable version of "no-cloud", and it is the one
-        open item on this branch.</p>
-      </div>
 
       <div class="note danger">
-        <div class="nh">🔴 If you land here, back up the keys the same day</div>
-        <p>The <code>deviceId</code> / <code>password</code> / <strong><code>aesKey</code></strong>
-        triplet is issued <strong>only by AiDot's cloud</strong>, and it is the sole thing that keeps
-        these bulbs controllable if AiDot ever goes away. <strong>Back up those credentials for all six
-        bulbs immediately after onboarding.</strong></p>
-        <p>With the fork, they live in Home Assistant's <code>.storage/core.config_entries</code>.</p>
-        <p>⚠️ <strong>That file contains every integration's secrets — not just AiDot's.</strong> API
-        tokens, cloud passwords, and access tokens for everything else you have configured are in there
-        too. Treat a copy of it as a top-tier secret: encrypt it, store it in a password manager or an
-        encrypted volume, and <strong>never commit it to a repository</strong>. If you would rather not
-        handle the whole file, extract just the per-bulb triplet and back that up instead.</p>
-        <p>This is the lesson of every dead-cloud bulb project, applied one device <em>earlier</em>.
-        When a vendor dies, its keys and onboarding die with it, and recovery becomes a community
-        reverse-engineering effort — if it happens at all. Here the equivalent secrets are obtainable
-        <strong>right now, while the vendor is alive</strong>, and only now. Backing them up converts a
-        permanent vendor dependency into a one-time errand.</p>
+        <div class="nh">That fourth row is the entire decision</div>
+        <p>On the day AiDot's auth endpoint stops answering, the official integration raises a config
+        error and stops loading — and your lights go with it. That is a vendor-shutdown brick,
+        reproduced in software, in an integration marketed as having local control. The fork degrades
+        gracefully to <em>"using cached login info"</em> and keeps working.</p>
+        <p><strong>Use the fork.</strong> It is the harder install and the right one.</p>
       </div>
 
-      <h3>⚠️ Manual IPs are a required setup step, not troubleshooting</h3>
-      <p>The fork discovers devices by <strong>UDP broadcast to <code>255.255.255.255:6666</code></strong>.
-      A broadcast like that leaves <strong>only the default-route interface</strong> — so on a
-      <strong>multi-homed Home Assistant host</strong>, where the IoT segment is reached over a secondary
-      NIC that is <em>not</em> the default route, the discovery packet never goes out the leg the bulbs
-      are on. Discovery then finds nothing, silently, while everything else looks correctly configured.</p>
-      <p><strong>So on any multi-homed host, plan on manual configuration from the start:</strong></p>
+      <h3>Step 1 — a throwaway AiDot account</h3>
+      <p>The app is unavoidable; your real identity is not. Create the account with an alias address.
+      This minimises what the vendor learns and costs nothing.</p>
+
+      <h3>Step 2 — onboard all six bulbs in the AiDot app</h3>
+      <p>Put them on the network segment you intend them to live on permanently — moving them later
+      means re-provisioning. The bulbs are <strong>2.4 GHz only</strong>; if your SSID is a single
+      band-steered name, make sure 2.4 GHz is actually being offered during onboarding, or the join
+      will fail in a way the app reports unhelpfully.</p>
+      <p>Also do this now, while the bulbs are on a bench and not yet in fixtures:</p>
       <ul>
-        <li>Configure <strong>each bulb by IP</strong> in the integration.</li>
-        <li>Give <strong>every bulb a DHCP reservation</strong>, so those IPs never move.</li>
+        <li>Label each bulb physically (a marker dot on the base) and name it in the app to match.</li>
+        <li>Decide the naming scheme by <strong>where the bulb is going</strong> —
+        <code>kitchen_can_1</code> — not what it is.</li>
+      </ul>
+
+      <h3>Step 3 — install the fork and log in once</h3>
+      <p>Add <code>sulibot/hass-AiDot</code> through <strong>HACS</strong> as a custom repository,
+      install, restart Home Assistant, then add the integration and log in with the throwaway account.
+      Select your house when prompted.</p>
+
+      <h3>Step 4 — back it up before you do anything else</h3>
+      <p>→ <a href="#keys"><strong>§4</strong></a>. <strong>Do not skip this.</strong> It is the step
+      that converts a permanent vendor dependency into a one-time errand, and it is only possible
+      while AiDot is alive.</p>
+
+      <h3>Step 5 — configure the bulbs by IP</h3>
+      <p>→ <a href="#ips"><strong>§5</strong></a>. Required on many setups, not optional troubleshooting.</p>
+
+      <h3>Step 6 — cut the cord and verify</h3>
+      <p>→ <a href="#local"><strong>§6</strong></a>.</p>
+    </section>
+
+    <section id="keys">
+      <h2>4. 🔴 Back up the keys the same day</h2>
+      <p>The <code>deviceId</code> / <code>password</code> / <strong><code>aesKey</code></strong>
+      triplet is issued <strong>only by AiDot's cloud</strong>. It is the sole thing keeping these
+      bulbs controllable if AiDot ever shuts its servers down. <strong>Back up all six immediately
+      after onboarding.</strong></p>
+      <p>With the fork, the credentials live in Home Assistant's
+      <code>.storage/core.config_entries</code>.</p>
+
+      <div class="note danger">
+        <div class="nh">⚠️ That file contains every integration's secrets — not just AiDot's</div>
+        <p>API tokens, cloud passwords and access tokens for <strong>everything else</strong> you have
+        configured are in there too. Treat a copy as a top-tier secret:</p>
+        <ul>
+          <li>encrypt it, and store it in a password manager or an encrypted volume</li>
+          <li><strong>never commit it to a repository</strong>, and never paste it into an issue or a chat</li>
+          <li>if you would rather not handle the whole file, <strong>extract just the per-bulb
+          triplet</strong> and back that up instead — it is all you actually need</li>
+        </ul>
+      </div>
+
+      <p><strong>Why this matters more than it sounds.</strong> This is the lesson of every dead-cloud
+      bulb project, applied one device <em>earlier</em>. When a vendor dies, its key issuance dies with
+      it: the secrets become unobtainable at exactly the moment you need them, and recovery becomes a
+      community reverse-engineering effort — if it happens at all. Here those secrets are obtainable
+      <strong>right now, while the vendor is alive</strong>, and only now.</p>
+
+      <div class="note accent">
+        <div class="nh">Ten minutes today, or a bricked six-pack later</div>
+        <p>There is no third option.</p>
+      </div>
+    </section>
+
+    <section id="ips">
+      <h2>5. Manual IPs are required, not troubleshooting</h2>
+      <p>The fork discovers devices by <strong>UDP broadcast to <code>255.255.255.255:6666</code></strong>.
+      A broadcast like that leaves <strong>only the default-route interface</strong>.</p>
+
+      <div class="note warn">
+        <div class="nh">The silent failure</div>
+        <p>On a <strong>multi-homed Home Assistant host</strong> — where the IoT network is reached
+        over a secondary NIC that is <em>not</em> the default route — the discovery packet never goes
+        out the leg the bulbs are on. <strong>Discovery then finds nothing, silently, while every
+        other part of the configuration looks correct.</strong> It is a genuinely nasty failure mode
+        because there is no error to read.</p>
+      </div>
+
+      <p><strong>On any multi-homed host, plan on manual configuration from the start:</strong></p>
+      <ul>
+        <li>Give <strong>every bulb a DHCP reservation</strong>, so its address never moves.</li>
+        <li>Configure <strong>each bulb by IP</strong> in the integration rather than relying on discovery.</li>
       </ul>
       <p>Do this as part of setup. Treating it as a troubleshooting step costs an evening of chasing a
       discovery mechanism that was never going to work on that topology.</p>
 
       <div class="note">
-        <div class="nh">Honest bottom line</div>
-        <p>Path B <em>can</em> reach a real no-cloud end state — but only via the fork, only after a
-        vendor account and an app install, and only if you keep the keys. Matter costs none of that. If
-        your bulbs turn out to be non-Matter and you want the clean end state, the best move is probably
-        to <strong>return them and buy the explicitly Matter-labelled Consciot SKU</strong> (e.g.
-        B0C4YDSSGQ, B0CGMDX8VJ), which gets you there for the same money.</p>
+        <div class="nh">Why manual IPs are a clean answer, not a workaround</div>
+        <p><strong>UDP :6666 is discovery only</strong> — actual control is the AES-encrypted TCP
+        :10000 session. Once bulbs are configured by IP, discovery is not in the path at all.</p>
       </div>
     </section>
 
-    <section id="flash">
-      <h2>9. Flashing — ruled out</h2>
+    <section id="local">
+      <h2>6. Proving it is really local</h2>
+      <p>This is both the final setup step and the falsifiable test of everything above.</p>
+      <ol class="steps">
+        <li><strong>Firewall the bulbs <em>and</em> Home Assistant outbound.</strong> Deny WAN egress.</li>
+        <li><strong>Restart Home Assistant.</strong></li>
+        <li><strong>Confirm control still works</strong> — on/off, brightness, color, from the HA UI.</li>
+      </ol>
 
-      <div class="note danger">
-        <div class="nh">On the Matter branch, flashing is not a fallback. It is destruction.</div>
-        <p>Each Matter unit is factory-provisioned with a unique <strong>DAC (Device Attestation
-        Certificate)</strong> and operational keys in protected flash. Overwriting the firmware
-        <strong>destroys the DAC irrecoverably</strong> — no rebuild restores it, and the bulb can
-        never rejoin <em>any</em> Matter fabric again. You would be trading a fully-local,
-        standards-based, multi-ecosystem bulb for a strictly worse one, to solve a problem the bulb
-        does not have. Matter devices also commonly ship with secure boot and flash encryption
-        enabled, so it frequently isn't even possible.</p>
+      <div class="note warn">
+        <div class="nh">🚧 This is the one genuinely unverified claim in this document</div>
+        <p>The fork's README says "no cloud dependency for device control," and its protocol
+        documentation implies credentials are cached — but neither states outright that they survive a
+        restart. <strong>The restart is the part that matters</strong>: it is what distinguishes
+        credentials genuinely persisted to disk from credentials merely held in memory since login. Do
+        not take either project's marketing on faith; run the test yourself, and know the answer before
+        you need it.</p>
       </div>
 
-      <p><strong>On the non-Matter branch</strong> (Path B), flashing is the only true zero-cloud route
-      — but there is <strong>no public teardown of any AiDot / Linkind / Consciot bulb</strong>, so the
-      SoC is unidentified and there is no prior art to lean on. It costs six disassemblies and six
-      soldering jobs on unknown silicon. Not recommended; if you attempt it anyway, do <strong>one</strong>
-      bulb as a scout first.</p>
+      <p>Once it passes, <strong>leave the egress block in place permanently.</strong> There is nothing
+      on the far side of it you want — and with the block in place, a future vendor shutdown becomes a
+      non-event.</p>
+      <p>Worth also watching what the bulbs attempt outbound for a day. Anything resembling a
+      persistent TLS session to a vendor endpoint is worth understanding.</p>
+    </section>
 
-      <details>
-        <summary>Silicon notes — only relevant if the bulbs turn out to be non-Matter (unconfirmed)</summary>
-        <p><strong>Hard exclusion:</strong> Matter over Wi-Fi requires Wi-Fi <em>and</em> BLE. That
-        rules out <strong>ESP8266/ESP8285</strong> and <strong>RTL8710BN</strong> outright — neither
-        has BLE — and effectively rules out plain <strong>BK7231N/T</strong>.</p>
-        <p>FCC internal photos of an AiDot bulb filing show module pad labels:</p>
-        <pre><code>NC · TX · RX · CEN · SL_2 · SL_1 · GND        ADC · PWM · IO16 · 3.3V</code></pre>
-        <p>🔑 <strong><code>CEN</code> is the tell.</strong> Espressif parts label chip-enable
-        <strong><code>EN</code></strong>; <strong><code>CEN</code></strong> is Beken/Realtek
-        nomenclature — which argues against an ESP32-C3 despite the C3 being the market-leading Matter
-        bulb chip. Ranked candidates: <strong>Beken BK7238</strong> (~40%, Beken's Matter part,
-        OpenBeken-supported), <strong>Realtek RTL8720CF / Ameba Z2</strong> (~30%),
-        <strong>ESP32-C3</strong> (~20%).</p>
-        <p>Countervailing lead: the blakadder template database lists two <strong>Linkind wall
-        switches</strong> on <strong>ESP32-SOLO-1</strong>, suggesting AiDot may be an Espressif house.
-        That is an inference across product lines, not a fact about this bulb.</p>
-        <p><strong>None of this is confirmed, and on the Matter branch none of it matters.</strong></p>
-      </details>
+    <section id="ha">
+      <h2>7. What you get in Home Assistant</h2>
+      <p>One <code>light.*</code> entity per bulb:</p>
+      <div class="tw">
+      <table>
+        <thead><tr><th>Capability</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>On / off</td><td>✅</td></tr>
+          <tr><td>Brightness</td><td>✅</td></tr>
+          <tr><td>Color temperature</td><td>✅ ~<strong>2700 K – 6500 K</strong></td></tr>
+          <tr><td>RGB color</td><td>✅ on capable devices — this bulb is advertised as color-changing</td></tr>
+          <tr><td>Transitions</td><td>⚠️ integration-dependent, not a protocol guarantee</td></tr>
+          <tr><td>Vendor effects / music sync</td><td>❌ app-side only; these do not cross into HA</td></tr>
+          <tr><td>Power / energy metering</td><td>❌ not present in this hardware class</td></tr>
+          <tr><td>Firmware updates</td><td>❌ not surfaced — updates go through the vendor app</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p><strong>What you give up versus the app:</strong> music-sync and microphone reactivity, and
+      the vendor's canned scenes. What you get back is a light that works when the internet doesn't,
+      responds without a round-trip to someone's data centre, and cannot be switched off by a business
+      decision. Rebuilding a candle flicker as an HA script is an afternoon; recovering an abandoned
+      cloud bulb is not possible at all.</p>
+
+      <h3>Grouping the six</h3>
+      <pre><code><span class="cmt"># configuration.yaml</span>
+light:
+  - platform: group
+    name: "Consciot Bulbs"
+    entities:
+      - light.kitchen_can_1
+      - light.kitchen_can_2
+      - light.kitchen_can_3</code></pre>
+    </section>
+
+    <section id="matter">
+      <h2>8. The Matter SKU exists — this just isn't it</h2>
+      <p>AiDot/Consciot sells an explicitly <strong>Matter-certified</strong> A19 that commissions
+      <strong>natively into Home Assistant</strong>: no app, no account, no cloud contact at any point,
+      no keys to back up, and no integration to keep alive. It is a strictly better outcome than
+      everything described above, and it costs about the same.</p>
+
+      <div class="note">
+        <div class="nh">These bulbs are not that SKU</div>
+        <p>Owner-confirmed from the packaging.</p>
+      </div>
+
+      <p>If you are buying rather than already holding a six-pack, buy the Matter one instead. Look for
+      <strong>"Matter-Certified" in the listing title</strong> and, decisively, a <strong>Matter logo
+      plus an 11-digit setup code (or QR) printed on the bulb and the box</strong>. Candidate Matter
+      SKUs seen in AiDot's catalogue include <strong>B0C4YDSSGQ</strong> and <strong>B0CGMDX8VJ</strong>
+      — but verify against the carton, not the listing, for the reason described in
+      <a href="#what">§1</a>.</p>
+
+      <p>For an existing six-pack the calculus is less obvious: Path 1 reaches a genuinely local end
+      state, and returning working hardware has its own costs. The honest summary is that Path 1 is
+      <em>good</em>, and the Matter SKU is <em>better and simpler</em>.</p>
+    </section>
+
+    <section id="flash">
+      <h2>9. Flashing — the last resort</h2>
+      <p>Flashing to <strong>ESPHome</strong> is the only path with <strong>zero</strong> vendor
+      involvement at any stage — no account, no app, no keys. It is also <strong>not recommended
+      here</strong>, for a concrete reason: <strong>the silicon is unidentified.</strong></p>
+      <ul>
+        <li><strong>There is no public teardown of any AiDot / Linkind / Consciot bulb.</strong>
+        Verified negative, not an assumption.</li>
+        <li>There is therefore <strong>no prior art</strong>, no known-good pinout, and no confirmed
+        procedure.</li>
+        <li>It costs <strong>six disassemblies and six soldering jobs</strong> on unknown hardware —
+        and UART is the only route, since there is no Tuya-style OTA exploit path for this vendor.</li>
+      </ul>
+
+      <p>Two <strong>conflicting leads</strong> exist, and neither resolves it:</p>
+      <div class="tw">
+      <table>
+        <thead><tr><th>Lead</th><th>Points to</th><th>Strength</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>FCC internal photos of an AiDot bulb filing show module pads labelled <code>NC · TX · RX · CEN · SL_2 · SL_1 · GND</code></td>
+            <td><strong><code>CEN</code> is Beken/Realtek nomenclature</strong> — Espressif labels it <code>EN</code>. Suggests <strong>Beken BK7231N</strong></td>
+            <td>module photo, but from a different filing than this SKU</td>
+          </tr>
+          <tr>
+            <td>The blakadder template database lists two <strong>Linkind wall switches</strong> on <strong>ESP32-SOLO-1</strong></td>
+            <td>Suggests AiDot is an <strong>Espressif</strong> house</td>
+            <td>inference across product lines, not this bulb</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p>Note that even if it <em>is</em> a Beken part, <strong><code>tuya-cloudcutter</code> still does
+      not apply</strong> — cloudcutter is keyed to the <em>vendor's</em> cloud activation handshake, not
+      to the silicon, and Consciot appears nowhere in its database. Beken silicon would mean
+      <strong>OpenBeken or ESPHome via LibreTiny, over UART</strong>.</p>
+
+      <p><strong>If you attempt it anyway: scout one bulb first.</strong> Open exactly one, identify the
+      chip, dump the flash before writing anything, and only then decide whether to do the other five.</p>
 
       <div class="note danger">
-        <div class="nh">⚠️ Mains safety — if you open a bulb anyway</div>
+        <div class="nh">⚠️ Mains safety — read before opening any bulb</div>
         <p>An A19 bulb's driver board sits directly on <strong>mains potential</strong> — there is no
-        isolation transformer. The board can hold a lethal charge in its bulk capacitor
-        <strong>after</strong> it is unplugged. Never open a bulb connected to mains, never probe a
-        powered board, and discharge the bulk capacitor before touching anything. Use
-        <strong>3.3 V logic only</strong>. If you are not already comfortable working on non-isolated
-        mains circuitry, do not start here.</p>
+        isolation transformer. The board can hold a <strong>lethal charge in its bulk capacitor after it
+        is unplugged</strong>.</p>
+        <ul>
+          <li>Never open a bulb that is connected to mains, and never probe a powered board.</li>
+          <li>Discharge the bulk capacitor before touching anything.</li>
+          <li>Use <strong>3.3 V logic only</strong> — 5 V will destroy the module.</li>
+          <li>A USB-serial adapter's 3V3 pin is often too weak to power a Wi-Fi module through boot; use
+          a proper external 3.3 V supply with a common ground.</li>
+        </ul>
+        <p>If you are not already comfortable working on non-isolated mains circuitry, do not start here.</p>
       </div>
     </section>
 
     <section id="open">
       <h2>10. Open questions</h2>
       <ul>
-        <li>🚧 <strong>Is this exact ASIN the Matter SKU?</strong> The CSA record proves a Consciot A19
-        is certified; confirming this box is that SKU is pending an owner check. <em>This is the only
-        thing that changes the recommendation.</em> → <a href="#sku">§2</a></li>
-        <li><strong>Exact HA UI wording for BLE-proxy commissioning</strong> — the feature and
-        architecture are confirmed; the precise click-path is inferred from the standard add-device flow.</li>
-        <li><strong>Does matter.js 9.x need an interface hint on a multi-NIC host?</strong> Expected: no.</li>
-        <li><strong>Silicon</strong> — unconfirmed, and moot unless Path B applies.</li>
-        <li><strong>Does it implement Matter OTA?</strong> Affects whether firmware updates surface in HA.</li>
-        <li><strong>Credential persistence in <code>hass-AiDot</code> across restarts</strong> — Path B
-        only; resolved empirically by the firewall test in §8.</li>
+        <li>🚧 <strong>Do the fork's cached credentials survive a Home Assistant restart with the WAN
+        blocked?</strong> Implied by its protocol documentation, not stated outright. <strong>This is the
+        load-bearing unverified claim in this document</strong> — <a href="#local">§6</a> is the test.</li>
+        <li><strong>What SoC is inside?</strong> Unidentified. Two conflicting leads
+        (<a href="#flash">§9</a>), no public teardown. Only matters if flashing is ever attempted.</li>
+        <li><strong>Does the fork expose full RGB on this model,</strong> or only brightness + color
+        temperature?</li>
+        <li><strong>Can the <code>aesKey</code> be recovered from a flash dump?</strong> Would remove the
+        cloud from key issuance entirely — but requires UART, so it collapses into
+        <a href="#flash">§9</a> anyway.</li>
       </ul>
-      <p><em>Note on the CSA record:</em> one search snippet showed certification ID
-      <code>CSA2526DMAT45503-24</code> while the product page showed <code>CSA2609OMAT49756-24</code> —
-      consistent with AiDot holding multiple bulb certificates. The VID, PID and device type are the
-      load-bearing fields, and they are consistent.</p>
     </section>
 
     <section id="credits">
@@ -934,37 +745,35 @@ light:
 
       <h3>What makes the recommended path possible</h3>
       <ul>
-        <li><a href="https://www.home-assistant.io/">Home Assistant</a>'s
-        <a href="https://www.home-assistant.io/integrations/matter/">Matter integration</a> and the
-        <a href="https://github.com/home-assistant-libs/python-matter-server">Python Matter Server</a> /
-        <a href="https://github.com/home-assistant/addons/blob/master/matter_server/DOCS.md">Matter Server add-on</a>
-        — the local fabric controller doing the actual work, including phone-free BLE-proxy commissioning.</li>
-        <li><a href="https://csa-iot.org/">Connectivity Standards Alliance</a> — Matter itself, and the
-        public <a href="https://csa-iot.org/csa_product/consciot-smart-light-bulb/">certified-products
-        database</a> that settled the identification question with a primary source instead of guesswork.</li>
-        <li><a href="https://github.com/project-chip/connectedhomeip">project-chip/connectedhomeip</a> —
-        the reference SDK and <code>chip-tool</code> diagnostics.</li>
-      </ul>
-
-      <h3>Path B tooling</h3>
-      <ul>
+        <li><a href="https://github.com/sulibot/hass-AiDot">sulibot/hass-AiDot</a> — the community fork
+        this guide is built around. Its <code>protocol_documentation.md</code> is the best public
+        description of the AiDot local protocol, and its cached-credential behaviour is what makes a
+        no-cloud end state reachable at all.</li>
+        <li><a href="https://github.com/AiDot-Development-Team/hass-AiDot">AiDot-Development-Team/hass-AiDot</a>
+        — the upstream the fork derives from.</li>
         <li><a href="https://www.home-assistant.io/integrations/aidot">Home Assistant <code>aidot</code>
-        integration</a> — the official, built-in option.</li>
-        <li><a href="https://github.com/sulibot/hass-AiDot">sulibot/hass-AiDot</a> — the community fork,
-        whose <code>protocol_documentation.md</code> is the best public description of the AiDot local
-        protocol.</li>
+        integration</a> — the official built-in option. Easier; see <a href="#path1">§3</a> for why it is
+        not the recommendation here.</li>
       </ul>
 
       <h3>Investigated and <em>not</em> applicable</h3>
       <ul>
         <li><a href="https://github.com/tuya-cloudcutter/tuya-cloudcutter">tuya-cloudcutter</a> —
-        excellent work, wrong vendor. Zero Consciot profiles in 1,149. Listed so the next person does
+        excellent work, wrong vendor. Zero Consciot profiles in 1,149. Documented so the next person does
         not spend an evening rediscovering that.</li>
         <li><a href="https://github.com/ct-Open-Source/tuya-convert">tuya-convert</a> — deprecated
         upstream, and inapplicable for the same reason.</li>
-        <li><a href="https://esphome.io/">ESPHome</a> /
-        <a href="https://github.com/openshwprojects/OpenBK7231T_App">OpenBeken</a> — outstanding
-        projects, but see <a href="#flash">§9</a>: flashing a Matter bulb destroys it.</li>
+        <li><strong>LocalTuya</strong> — same. AiDot devices have no Tuya <code>local_key</code>.</li>
+      </ul>
+
+      <h3>If you ever go down §9</h3>
+      <ul>
+        <li><a href="https://esphome.io/">ESPHome</a> and
+        <a href="https://github.com/libretiny-eu/libretiny">LibreTiny</a></li>
+        <li><a href="https://github.com/openshwprojects/OpenBK7231T_App">OpenBeken</a> — if the Beken
+        lead is correct</li>
+        <li><a href="https://templates.blakadder.com/">blakadder's device templates</a> — source of the
+        Linkind ESP32-SOLO-1 lead</li>
       </ul>
     </section>
 
@@ -974,10 +783,9 @@ light:
 <footer>
   <div class="wrap">
     <p><strong>Disclaimer.</strong> Independent interoperability research on hardware the author
-    purchased. No affiliation with Consciot, AiDot, Leedarson, Amazon, or the Connectivity Standards
-    Alliance. The recommended path involves no disassembly and no warranty impact. Opening a
-    mains-powered bulb voids its warranty and carries a real risk of electric shock and fire; §9 is at
-    your own risk.</p>
+    purchased. No affiliation with Consciot, AiDot, Leedarson, Amazon, or Home Assistant. Sections 1–8
+    involve no disassembly and no warranty impact. Opening a mains-powered bulb voids its warranty and
+    carries a real risk of electric shock and fire; §9 is entirely at your own risk.</p>
     <div class="foot-links">
       <a href="https://github.com/jphein/consciot-a19-smartbulb">Source on GitHub</a>
       <a href="https://github.com/jphein/consciot-a19-smartbulb/blob/main/LICENSE">MIT License</a>
