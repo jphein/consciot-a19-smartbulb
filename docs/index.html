@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consciot A19 → Home Assistant, Fully Local</title>
+<meta name="description" content="Get the Consciot A19 color WiFi bulb (Amazon B0G6YFQDFW) into Home Assistant, fully local — Matter over WiFi, no cloud, no flashing, no soldering.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2a10 10 0 0 0-6 18v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a10 10 0 0 0-6-18z' fill='%23f0b34a'/%3E%3Cpath d='M12 27h8v2a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z' fill='%23888'/%3E%3Cpath d='M16 21v-5m0 0-3.4-3.4M16 16l3.4-3.4' stroke='%236d4aff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* ═══ TOKENS — light is the base, dark overrides only what changes ═══ */
+:root{
+  --bg:#fbf9f5;
+  --bg-raised:#ffffff;
+  --bg-sunken:#f2eee6;
+  --ink:#1a1820;
+  --ink-soft:#565064;
+  --ink-faint:#8a8394;
+  --rule:#e3ddd2;
+  --rule-soft:#efeae1;
+  --accent:#5b3fd6;
+  --accent-ink:#4a31bb;
+  --accent-wash:#f0ecfe;
+  --gold:#b26a00;
+  --gold-wash:#fdf3e2;
+  --danger:#b3261e;
+  --danger-wash:#fdf0ee;
+  --danger-rule:#e9b8b3;
+  --good:#1f6f43;
+  --good-wash:#eef7f1;
+  --good-rule:#b9dcc7;
+  --warn:#8a5a00;
+  --warn-wash:#fdf5e4;
+  --warn-rule:#e8d5a8;
+  --code-bg:#f4f1ea;
+  --code-ink:#2e2a34;
+  --glow:rgba(240,180,60,.45);
+  --shadow:0 1px 2px rgba(24,20,32,.05), 0 8px 24px -12px rgba(24,20,32,.16);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Inter,Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121016;
+    --bg-raised:#1b1822;
+    --bg-sunken:#0d0c11;
+    --ink:#eae6f0;
+    --ink-soft:#a8a1b4;
+    --ink-faint:#7b7488;
+    --rule:#2f2a38;
+    --rule-soft:#231f2b;
+    --accent:#a58cff;
+    --accent-ink:#bda9ff;
+    --accent-wash:#1e1834;
+    --gold:#f0b34a;
+    --gold-wash:#241c0d;
+    --danger:#f2857b;
+    --danger-wash:#2a1512;
+    --danger-rule:#5c2a24;
+    --good:#6fd39b;
+    --good-wash:#12241a;
+    --good-rule:#28503a;
+    --warn:#e8bf6a;
+    --warn-wash:#241d0e;
+    --warn-rule:#4d3d18;
+    --code-bg:#0e0d12;
+    --code-ink:#dad4e2;
+    --glow:rgba(240,180,60,.20);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.75);
+  }
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 16.5px/1.65 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  overflow-wrap:break-word;
+}
+
+/* ═══ LAYOUT ═══ */
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media (min-width:1000px){
+  .cols{grid-template-columns:230px minmax(0,1fr);gap:56px;align-items:start}
+}
+
+/* ═══ HERO ═══ */
+header.hero{
+  position:relative; overflow:hidden;
+  border-bottom:1px solid var(--rule);
+  background:
+    radial-gradient(70ch 40ch at 80% -32%, var(--glow), transparent 64%),
+    var(--bg-sunken);
+}
+.hero-inner{padding:clamp(46px,8vw,78px) 0 clamp(30px,5vw,44px);position:relative;z-index:1}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:.55em;
+  font:600 11.5px/1 var(--mono); letter-spacing:.13em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent-wash);
+  border:1px solid var(--rule); border-radius:999px; padding:7px 13px;
+}
+h1{
+  font-size:clamp(2rem,5.2vw,3.25rem); line-height:1.06; letter-spacing:-.025em;
+  margin:.55em 0 0; font-weight:680; max-width:24ch;
+}
+h1 .hl{background:linear-gradient(transparent 62%, var(--glow) 62%)}
+.sub{margin:1.05em 0 0;max-width:62ch;font-size:clamp(1rem,1.9vw,1.16rem);color:var(--ink-soft)}
+.asin{
+  font:600 .95em/1 var(--mono); color:var(--ink);
+  background:var(--bg-raised); border:1px solid var(--rule);
+  border-radius:5px; padding:3px 7px; white-space:nowrap;
+}
+.hero-meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:1.7em}
+.chip{
+  display:inline-flex;align-items:center;gap:.5em;
+  font:500 13px/1 var(--sans);
+  background:var(--bg-raised); border:1px solid var(--rule);
+  border-radius:999px; padding:8px 13px; color:var(--ink-soft);
+  box-shadow:var(--shadow);
+}
+.chip b{color:var(--ink);font-weight:620}
+
+/* ═══ SIDEBAR NAV ═══ */
+nav.toc{display:none}
+@media (min-width:1000px){
+  nav.toc{
+    display:block; position:sticky; top:28px;
+    padding:34px 0 40px; font-size:14px;
+  }
+  nav.toc .toc-h{
+    font:600 10.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-faint); margin-bottom:14px;
+  }
+  nav.toc a{
+    display:block; padding:6px 0 6px 13px; color:var(--ink-soft);
+    text-decoration:none; border-left:2px solid var(--rule-soft);
+    transition:color .15s, border-color .15s;
+  }
+  nav.toc a:hover{color:var(--accent);border-left-color:var(--accent)}
+}
+
+/* ═══ CONTENT ═══ */
+main{padding:34px 0 80px;min-width:0}
+section{scroll-margin-top:22px}
+h2{
+  font-size:clamp(1.35rem,2.9vw,1.85rem); line-height:1.2; letter-spacing:-.018em;
+  margin:2.6em 0 .55em; font-weight:660; padding-bottom:.34em;
+  border-bottom:1px solid var(--rule);
+}
+section:first-of-type h2{margin-top:.3em}
+h3{font-size:1.12rem;line-height:1.3;margin:2em 0 .5em;font-weight:640;letter-spacing:-.008em}
+h4{font-size:.98rem;margin:1.5em 0 .4em;font-weight:640;color:var(--ink-soft)}
+p{margin:0 0 1.05em;max-width:74ch}
+ul,ol{margin:0 0 1.15em;padding-left:1.35em;max-width:74ch}
+li{margin:.4em 0}
+li>ul,li>ol{margin:.4em 0}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2.5px}
+a:hover{color:var(--accent-ink)}
+strong{font-weight:640;color:var(--ink)}
+hr{border:0;border-top:1px solid var(--rule);margin:3em 0}
+
+code{
+  font:.885em/1.5 var(--mono); background:var(--code-bg); color:var(--code-ink);
+  padding:.15em .42em; border-radius:4px; border:1px solid var(--rule-soft);
+}
+pre{
+  background:var(--code-bg); border:1px solid var(--rule); border-radius:9px;
+  padding:15px 17px; overflow-x:auto; margin:0 0 1.3em;
+  box-shadow:var(--shadow);
+}
+pre code{background:none;border:0;padding:0;font-size:13.6px;line-height:1.62;color:var(--code-ink)}
+.cmt{color:var(--ink-faint);font-style:italic}
+
+/* ═══ CALLOUTS ═══ */
+.note{
+  border:1px solid var(--rule); border-left-width:3px; border-radius:8px;
+  padding:15px 18px; margin:0 0 1.35em; background:var(--bg-raised);
+  box-shadow:var(--shadow);
+}
+.note>:last-child{margin-bottom:0}
+.note .nh{
+  display:flex;align-items:center;gap:.5em;
+  font-weight:650; margin-bottom:.5em; font-size:.97rem;
+}
+.note.good{border-left-color:var(--good);background:var(--good-wash);border-color:var(--good-rule)}
+.note.good .nh{color:var(--good)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-wash);border-color:var(--warn-rule)}
+.note.warn .nh{color:var(--warn)}
+.note.danger{border-left-color:var(--danger);background:var(--danger-wash);border-color:var(--danger-rule)}
+.note.danger .nh{color:var(--danger)}
+.note.accent{border-left-color:var(--accent);background:var(--accent-wash)}
+.note.accent .nh{color:var(--accent-ink)}
+
+/* ═══ TABLES ═══ */
+.tw{overflow-x:auto;margin:0 0 1.4em;border:1px solid var(--rule);border-radius:9px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.6px;background:var(--bg-raised)}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+th{background:var(--bg-sunken);font-weight:640;font-size:13px;letter-spacing:.01em;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td code{font-size:.85em}
+
+/* ═══ DIAGRAM ═══ */
+figure{margin:0 0 1.5em}
+.diagram{
+  background:var(--bg-raised); border:1px solid var(--rule); border-radius:11px;
+  padding:22px 18px; box-shadow:var(--shadow); overflow-x:auto;
+}
+.diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+figcaption{margin-top:.7em;font-size:13.5px;color:var(--ink-faint);text-align:center}
+
+/* ═══ STATUS BADGES ═══ */
+.badge{
+  display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.05em;
+  padding:4px 8px;border-radius:5px;border:1px solid var(--rule);white-space:nowrap;
+}
+.badge.b-wip{background:var(--warn-wash);color:var(--warn);border-color:var(--warn-rule)}
+.badge.b-ok{background:var(--good-wash);color:var(--good);border-color:var(--good-rule)}
+.badge.b-no{background:var(--danger-wash);color:var(--danger);border-color:var(--danger-rule)}
+
+/* ═══ FOOTER ═══ */
+footer{
+  border-top:1px solid var(--rule); background:var(--bg-sunken);
+  padding:34px 0 46px; font-size:14.5px; color:var(--ink-soft);
+}
+footer p{max-width:74ch}
+.foot-links{display:flex;flex-wrap:wrap;gap:18px;margin-top:6px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <span class="eyebrow">🚧 Research in progress</span>
+    <h1>Consciot A19 → Home Assistant, <span class="hl">fully local</span></h1>
+    <p class="sub">
+      Six color bulbs, no vendor cloud, no account, no flashing, no soldering. The evidence points
+      at <strong>Matter over Wi-Fi</strong> — which would make this the easy one.
+      Amazon <span class="asin">B0G6YFQDFW</span>
+    </p>
+    <div class="hero-meta">
+      <span class="chip">💡 <b>800 lm</b> · 60 W-eq</span>
+      <span class="chip">🎨 <b>RGB</b> color</span>
+      <span class="chip">🔌 <b>E26</b> A19</span>
+      <span class="chip">📶 <b>2.4 GHz</b> Wi-Fi</span>
+      <span class="chip">📦 <b>6-pack</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap cols">
+
+  <nav class="toc">
+    <div class="toc-h">Contents</div>
+    <a href="#tldr">TL;DR — the path</a>
+    <a href="#what">1 · What this bulb is</a>
+    <a href="#confirm">1.2 · Confirm in 60s</a>
+    <a href="#matter">2 · Matter over Wi-Fi ✅</a>
+    <a href="#network">3 · Network prerequisites</a>
+    <a href="#six">4 · Doing all six</a>
+    <a href="#ha">5 · What you get in HA</a>
+    <a href="#prove">6 · Proving it's local</a>
+    <a href="#fallback">7 · If it's NOT Matter</a>
+    <a href="#open">8 · Open questions</a>
+    <a href="#credits">9 · Prior art</a>
+  </nav>
+
+  <main>
+
+    <div class="note warn">
+      <div class="nh">🚧 Research in progress</div>
+      <p>This document is written alongside an active identification effort. Anything not yet
+      confirmed against the physical hardware is marked <span class="badge b-wip">🚧 UNVERIFIED</span>.
+      The headline recommendation is an evidence-backed <em>hypothesis</em> with a 60-second
+      confirmation test — <a href="#confirm">run the test</a> before planning around it.</p>
+    </div>
+
+    <section id="tldr">
+      <h2>TL;DR — the recommended path</h2>
+      <p><strong>Commission the bulbs as Matter-over-Wi-Fi devices directly into Home Assistant.</strong>
+      No flashing, no soldering, no vendor cloud account, no custom integration.</p>
+
+      <p>If the Matter identification holds, this device is <em>dramatically</em> easier to liberate
+      than the usual budget Wi-Fi bulb. There is no exploit to land, no OTA window to race, no UART
+      pads to solder. Matter is local by design: once a bulb is on Home Assistant's fabric, control
+      never leaves your LAN and the vendor app becomes optional — you can delete it.</p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 190" role="img" aria-label="Diagram: bulb talks Matter over WiFi and IPv6 to the Matter Server add-on, which talks to Home Assistant, producing a light entity. No cloud in the path.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+              </marker>
+              <radialGradient id="bulbglow" cx="50%" cy="42%" r="55%">
+                <stop offset="0%" stop-color="var(--gold)" stop-opacity=".55"/>
+                <stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+
+            <!-- bulb -->
+            <circle cx="82" cy="86" r="58" fill="url(#bulbglow)"/>
+            <path d="M82 40a26 26 0 0 0-15 47v7a5 5 0 0 0 5 5h20a5 5 0 0 0 5-5v-7a26 26 0 0 0-15-47z"
+                  fill="var(--gold)" stroke="var(--rule)" stroke-width="1.5"/>
+            <path d="M71 101h22v7a5 5 0 0 1-5 5h-12a5 5 0 0 1-5-5z" fill="var(--ink-faint)"/>
+            <text x="82" y="140" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="600" fill="var(--ink)">Bulb ×6</text>
+            <text x="82" y="157" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-faint)">2.4 GHz</text>
+
+            <!-- arrow 1 -->
+            <g color="var(--accent)">
+              <line x1="150" y1="86" x2="272" y2="86" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+            </g>
+            <text x="211" y="74" text-anchor="middle" font-family="var(--mono)" font-size="10.5" font-weight="600" fill="var(--accent)">Matter</text>
+            <text x="211" y="106" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--ink-faint)">IPv6 · mDNS</text>
+
+            <!-- matter server -->
+            <rect x="284" y="55" width="146" height="62" rx="9" fill="var(--accent-wash)" stroke="var(--accent)" stroke-width="1.5"/>
+            <text x="357" y="80" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="620" fill="var(--ink)">Matter Server</text>
+            <text x="357" y="98" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--ink-soft)">add-on</text>
+
+            <!-- arrow 2 -->
+            <g color="var(--ink-faint)">
+              <line x1="440" y1="86" x2="516" y2="86" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+            </g>
+
+            <!-- HA -->
+            <rect x="528" y="55" width="160" height="62" rx="9" fill="var(--bg-sunken)" stroke="var(--rule)" stroke-width="1.5"/>
+            <text x="608" y="80" text-anchor="middle" font-family="var(--sans)" font-size="13" font-weight="620" fill="var(--ink)">Home Assistant</text>
+            <text x="608" y="98" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="var(--good)">light.* entity</text>
+
+            <!-- no cloud -->
+            <g color="var(--danger)">
+              <line x1="357" y1="46" x2="357" y2="22" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4"/>
+              <line x1="345" y1="22" x2="369" y2="10" stroke="currentColor" stroke-width="2" transform="rotate(0)"/>
+            </g>
+            <text x="382" y="20" font-family="var(--sans)" font-size="12" font-weight="620" fill="var(--danger)">no cloud · no account</text>
+
+            <text x="608" y="140" text-anchor="middle" font-family="var(--sans)" font-size="12" fill="var(--ink-soft)">works with the WAN unplugged</text>
+          </svg>
+        </div>
+        <figcaption>The whole control path stays inside the LAN. Nothing traverses a vendor server.</figcaption>
+      </figure>
+
+      <div class="note accent">
+        <div class="nh">Confidence</div>
+        <p>High on <em>"this is the Matter line"</em> — <strong>not yet verified on the bulb in
+        hand</strong>. Confirm with the 60-second test below before buying six more.</p>
+      </div>
+    </section>
+
+    <section id="what">
+      <h2>1. What this bulb actually is</h2>
+
+      <h3>1.1 The evidence</h3>
+      <p><strong>Consciot is an AiDot-platform brand, not (apparently) a Tuya rebadge.</strong>
+      Consciot listings direct buyers to the <strong>AiDot</strong> app — a smart-home brand family
+      whose siblings include Linkind, Orein, and Winees. That matters for expectations, because the
+      entire Tuya-liberation toolchain everyone reaches for first is keyed to Tuya's firmware and
+      cloud, and:</p>
+
+      <div class="note danger">
+        <div class="nh">Zero hits</div>
+        <p><strong>Consciot appears 0 times in the <code>tuya-cloudcutter</code> device database</strong>
+        — 1,149 device profiles, grepped locally, zero matches.</p>
+      </div>
+
+      <p>So the reflexive <em>"cheap Wi-Fi bulb = Tuya OEM"</em> assumption is <strong>not
+      supported</strong> for this brand. Plan around Matter, not around cloudcutter.</p>
+
+      <p><strong>Consciot ships two distinct product lines, and the ecosystem list on the box tells
+      you which one you are holding.</strong> The tell is <em>Apple Home</em> and <em>SmartThings</em>:</p>
+
+      <div class="tw">
+      <table>
+        <thead><tr><th>Line</th><th>Box says</th><th>Example ASINs</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Matter line</strong></td>
+            <td>"Matter-Certified" · Works with <strong>Apple Home</strong> / Siri / <strong>SmartThings</strong></td>
+            <td><code>B0C4Y9L54Q</code> <code>B0C4YDSSGQ</code> <code>B0CB837NDQ</code> <code>B0CBKJBLTF</code> <code>B0CBMYZX3L</code></td>
+          </tr>
+          <tr>
+            <td><strong>Non-Matter line</strong></td>
+            <td>Works with Alexa &amp; Google Home <strong>only</strong></td>
+            <td><code>B0BYNFG5S4</code> <code>B0C5M1FSQZ</code> <code>B0CDC3SQSB</code></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="note good">
+        <div class="nh">✅ Our ASIN matches the Matter line</div>
+        <p><code>B0G6YFQDFW</code> lists all four ecosystems, including Apple Home and SmartThings.</p>
+      </div>
+
+      <p>The reasoning behind that inference is worth stating explicitly, because it is the
+      load-bearing step: <strong>Apple Home support on a budget Wi-Fi bulb effectively requires
+      Matter.</strong> The only pre-Matter way to speak to Apple Home was HomeKit-native (HAP over
+      Wi-Fi), which required per-device <strong>MFi certification</strong> — a licensing and
+      hardware-attestation burden that a no-name ODM selling six bulbs for the price of one Hue does
+      not carry. Alexa and Google Home both have cloud-to-cloud paths any vendor can implement;
+      Apple Home does not. So "Works with Apple Home" on a non-hub, non-Thread Wi-Fi bulb is a
+      strong Matter-over-Wi-Fi signal.</p>
+    </section>
+
+    <section id="confirm">
+      <h3>1.2 Confirm it in 60 seconds — do this first</h3>
+      <p>Three independent checks, cheapest first. Any one of them settles it.</p>
+
+      <h4>① Look for the Matter logo and setup code</h4>
+      <p>A Matter device <em>must</em> carry a commissioning payload. Check the bulb's plastic body,
+      the box, and the paper insert for the Matter mark (three interlocking arrows forming a
+      triangle), and an <strong>11-digit numeric setup code</strong> (often printed
+      <code>1234-567-8901</code>) and/or a <strong>QR code whose payload begins with <code>MT:</code></strong>.</p>
+      <p>An 11-digit code whose QR payload starts with <code>MT:</code> is conclusive — that is a
+      Matter onboarding payload and nothing else uses the format.</p>
+
+      <h4>② Look for <code>_matterc._udp</code> on the network</h4>
+      <pre><code><span class="cmt"># Commissionable (not yet paired) Matter devices:</span>
+avahi-browse -rt _matterc._udp
+
+<span class="cmt"># Already-commissioned Matter devices:</span>
+avahi-browse -rt _matter._tcp</code></pre>
+
+      <h4>③ Check the app's own words</h4>
+      <p>If the AiDot app offers "Add to Apple Home / SmartThings", or surfaces a <em>"Matter setup
+      code"</em> or <em>"pairing mode"</em> screen, it is Matter.</p>
+
+      <div class="note warn">
+        <div class="nh">📸 Photograph every setup code before you install the bulbs</div>
+        <p>This is the single most valuable 30 seconds in this whole document. The Matter setup code
+        is printed <strong>on the bulb itself</strong> — and becomes permanently unreadable the
+        moment the bulb is screwed into a recessed can, a globe fixture, or anything face-up. Lay
+        all six out, photograph every code, and store the photos somewhere you will still have them
+        in two years. Losing the code does not brick the bulb, but re-commissioning after a factory
+        reset means taking the fixture apart.</p>
+        <p><strong>Treat those photos as secrets.</strong> A Matter setup code is a commissioning
+        credential: anyone who has it and is in radio range of an uncommissioned bulb can join it to
+        <em>their</em> fabric. Never commit them, never post them in a screenshot.</p>
+      </div>
+    </section>
+
+    <section id="matter">
+      <h2>2. Path 1 — Matter over Wi-Fi <span class="badge b-ok">✅ RECOMMENDED</span></h2>
+
+      <h3>What you need</h3>
+      <div class="tw">
+      <table>
+        <tbody>
+          <tr><th>Home Assistant</th><td>2023.x or newer. HAOS or Supervised is the easy road.</td></tr>
+          <tr><th>Matter Server</th><td>The <strong>Matter Server</strong> add-on (Settings → Add-ons → Add-on Store), plus the <strong>Matter</strong> integration. On HAOS this is a two-click install.</td></tr>
+          <tr><th>Phone + HA app</th><td>Required. Commissioning is <strong>Bluetooth-assisted</strong> — the phone talks BLE to the bulb to hand over Wi-Fi credentials. There is no browser-only path.</td></tr>
+          <tr><th>Bluetooth</th><td>Just for the ~30 seconds of commissioning. Not needed afterwards.</td></tr>
+          <tr><th>2.4 GHz Wi-Fi</th><td>The bulb is 2.4 GHz-only. See §3.</td></tr>
+          <tr><th>IPv6 on the LAN</th><td><strong>Non-negotiable.</strong> See §3 — the #1 cause of Matter failures.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p>You do <strong>not</strong> need: a Thread border router (this is Wi-Fi Matter, not Thread),
+      a hub, a bridge, an AiDot account, or an internet connection.</p>
+
+      <h3>Step 1 — install the Matter server</h3>
+      <p>Settings → Add-ons → Add-on Store → <strong>Matter Server</strong> → Install → Start (enable
+      <em>Start on boot</em> and <em>Watchdog</em>). Then Settings → Devices &amp; Services →
+      <strong>Add Integration</strong> → <strong>Matter</strong> → accept the default (use the local add-on).</p>
+
+      <h3>Step 2 — factory-reset the bulb</h3>
+      <p>A bulb fresh from the box is already commissionable. A bulb that has ever been paired to the
+      vendor app is not, and must be reset first.</p>
+
+      <div class="note warn">
+        <div class="nh">🚧 The exact reset gesture for this model is unconfirmed</div>
+        <p>The near-universal convention for Wi-Fi bulbs — and the AiDot family's documented method —
+        is a <strong>power-cycle count</strong>: <strong>on ~1 s, off ~1 s, repeated 5 times</strong>,
+        leaving it on the 5th. The bulb confirms by blinking or cycling color. Some AiDot models use
+        3 cycles instead of 5. If 5 does nothing, try 3.</p>
+      </div>
+
+      <p>Confirmation that it worked: the bulb starts advertising <code>_matterc._udp</code>
+      (check ② above).</p>
+
+      <h3>Step 3 — commission it into Home Assistant</h3>
+      <p>Open the <strong>Home Assistant Companion app</strong> on your phone (not the browser), then:</p>
+      <pre><code>Settings → Devices &amp; Services → Add Integration → Matter → Add Matter device
+   → scan the QR code
+   → or tap "I don't have a QR code" and type the 11-digit setup code</code></pre>
+
+      <p>The phone does the rest: BLE handshake → hands the bulb your Wi-Fi credentials → the bulb
+      joins 2.4 GHz → HA's Matter fabric adopts it → a <code>light.*</code> entity appears. Typically
+      30–90 seconds.</p>
+
+      <h4>Platform notes</h4>
+      <ul>
+        <li><strong>Android</strong> — commissioning runs through Google Play Services' Matter module.
+        The Google Home app may need to be <em>installed</em> (not necessarily used) for that module
+        to be present. Android will often show its own Google-branded pairing sheet mid-flow; that is
+        expected and does <strong>not</strong> mean the bulb is being joined to Google's cloud.</li>
+        <li><strong>iOS</strong> — the HA Companion app can commission directly. Alternatively, pair
+        to <strong>Apple Home</strong> first, then share to HA via Matter <strong>multi-admin</strong>:
+        Home app → accessory → Settings → <em>Turn On Pairing Mode</em> → Apple generates a new,
+        one-time setup code → type that into HA. Both approaches end at the same place.</li>
+      </ul>
+
+      <h3>Step 4 — delete the vendor app</h3>
+      <p>Once the bulb is on HA's fabric, the AiDot app is dead weight. Matter devices do not need it,
+      and nothing in HA's control path traverses it. Uninstalling does not un-commission the bulb.</p>
+
+      <div class="note accent">
+        <div class="nh">Multi-admin, and why you might keep a second controller</div>
+        <p>Matter devices support a limited number of simultaneous fabrics — commonly <strong>5</strong>.
+        Each ecosystem you add (HA, Apple Home, Alexa, Google, SmartThings) consumes a slot. For an
+        all-local setup, use exactly one: Home Assistant. If you want Siri too, add Apple Home as a
+        second and stop there.</p>
+      </div>
+    </section>
+
+    <section id="network">
+      <h2>3. Network prerequisites (the part that actually bites)</h2>
+      <p>Matter commissioning failures are almost never the bulb. They are almost always one of these
+      three, in this order of frequency.</p>
+
+      <h3>3.1 IPv6 is mandatory — the #1 failure cause</h3>
+      <div class="note danger">
+        <div class="nh">⚠️ Matter's operational transport is IPv6-only</div>
+        <p>There is no IPv4 fallback. If your LAN has IPv6 disabled — a very common "hardening" choice
+        on IoT segments — commissioning will appear to succeed and then the device will be permanently
+        unreachable, or it will fail at the final step with an unhelpful timeout.</p>
+      </div>
+      <p>What must be true:</p>
+      <ul>
+        <li>IPv6 enabled on the segment the bulb lands on. <strong>Link-local (<code>fe80::/10</code>)
+        is sufficient</strong> — no global prefix, ULA, or ISP delegation required.</li>
+        <li><strong>Router Advertisements (RA) reaching that segment</strong>, so devices configure themselves.</li>
+        <li><strong>MLD snooping</strong> either working correctly or switched off. Broken MLD snooping
+        silently eats the IPv6 multicast that Matter's mDNS depends on — a genuinely nasty failure mode,
+        because everything else on the network looks fine.</li>
+      </ul>
+
+      <h3>3.2 mDNS must reach Home Assistant</h3>
+      <p>Matter discovery is mDNS (<code>_matterc._udp</code> before commissioning,
+      <code>_matter._tcp</code> after). HA's Matter server must be able to see those advertisements.</p>
+      <ul>
+        <li><strong>Simplest, most reliable:</strong> put the bulbs on the <strong>same L2 segment /
+        VLAN</strong> as Home Assistant.</li>
+        <li><strong>Separate IoT VLAN</strong> (a good practice, worth keeping): you need an
+        <strong>mDNS reflector / Avahi repeater</strong> bridging the HA and IoT segments —
+        <strong>for IPv6 as well as IPv4</strong> — plus firewall rules permitting Matter operational
+        traffic between them. Many mDNS reflectors default to IPv4-only, which reflects just enough for
+        the device to be <em>discovered</em> and not enough for it to <em>work</em>.</li>
+        <li><strong>Host networking:</strong> the Matter Server add-on needs host-level network access
+        to see multicast. The stock HAOS add-on is correct out of the box; hand-rolled Docker setups
+        are the ones that break here.</li>
+      </ul>
+
+      <div class="note">
+        <div class="nh">The honest recommendation</div>
+        <p>If you run a segmented network, commission the bulbs on the same VLAN as HA and
+        <em>then</em> decide whether moving them is worth the reflector debugging. Commissioning
+        across VLANs is the hardest version of this task, and it is optional.</p>
+      </div>
+
+      <h3>3.3 2.4 GHz band steering</h3>
+      <p>The bulb is 2.4 GHz-only. If your SSID is a single band-steered name covering 2.4 and 5 GHz,
+      the credential handoff can succeed while the join fails — the bulb is handed an SSID it then
+      cannot find on a band it can hear.</p>
+      <ol>
+        <li>Use a <strong>dedicated 2.4 GHz SSID</strong> (an IoT SSID is the clean answer).</li>
+        <li>Temporarily disable the 5 GHz radio for the duration of commissioning, then re-enable it.</li>
+        <li>Move the phone and bulb close to the AP so 2.4 GHz is the strongest candidate.</li>
+      </ol>
+    </section>
+
+    <section id="six">
+      <h2>4. Doing all six</h2>
+      <p>Six bulbs is six commissioning runs — there is no bulk-import path. What makes it painless:</p>
+      <ol>
+        <li><strong>Do them all on a bench first, before installing.</strong> One lamp, or a bare socket
+        adapter. Screw in bulb → photograph the code → commission → rename in HA → unscrew → next. All
+        six in ~15 minutes, all with the codes still readable.</li>
+        <li><strong>Rename each entity as you go</strong>, while you still know which physical bulb it
+        is. After they are in fixtures, <code>light.consciot_a19_4</code> tells you nothing. Name them
+        for <em>where they are going</em> — <code>light.kitchen_can_1</code> — not for what they are.</li>
+        <li><strong>Label the bulbs physically.</strong> A marker dot on the base matching the HA name
+        saves a real diagnostic afternoon later.</li>
+        <li><strong>Group them once they are up:</strong></li>
+      </ol>
+
+      <pre><code><span class="cmt"># configuration.yaml — one switch, six bulbs</span>
+light:
+  - platform: group
+    name: Kitchen Cans
+    entities:
+      - light.kitchen_can_1
+      - light.kitchen_can_2
+      - light.kitchen_can_3</code></pre>
+
+      <div class="note">
+        <div class="nh">Sending one command to six bulbs is six unicast messages</div>
+        <p>Matter over Wi-Fi has no broadcast group primitive in this path, so a group turn-on is
+        inherently a little staggered. Usually imperceptible; on a congested 2.4 GHz band it can become
+        a visible ripple. The fix is RF conditions (AP placement, channel width, fewer competing
+        devices) — not Home Assistant configuration.</p>
+      </div>
+    </section>
+
+    <section id="ha">
+      <h2>5. What you get in Home Assistant</h2>
+      <p><span class="badge b-wip">🚧 UNVERIFIED</span> — this is the Matter Color Temperature Light
+      device-type baseline, which is what an RGB+tunable bulb of this class conventionally implements.
+      To be replaced with a verified capability table.</p>
+
+      <div class="tw">
+      <table>
+        <thead><tr><th>Capability</th><th>Expected</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>On / off</td><td>✅</td><td>Matter On/Off cluster</td></tr>
+          <tr><td>Brightness</td><td>✅</td><td>Level Control cluster, 0–254 mapped to HA's 0–255</td></tr>
+          <tr><td>RGB color</td><td>✅</td><td>Color Control cluster — advertised as color-changing</td></tr>
+          <tr><td>Color temperature</td><td>🚧</td><td>Likely, in mireds; depends on whether the bulb is RGB-only or RGBTW</td></tr>
+          <tr><td>Transitions</td><td>✅</td><td><code>transition:</code> supported by the Level Control cluster</td></tr>
+          <tr><td>Vendor "scenes" / effects</td><td>❌</td><td>App-side effects are usually vendor-proprietary and do <strong>not</strong> cross the Matter boundary. Rebuild them as HA scripts.</td></tr>
+          <tr><td>Power / energy metering</td><td>❌</td><td>Not present on bulbs in this class</td></tr>
+          <tr><td>Firmware update from HA</td><td>🚧</td><td>Matter OTA Requestor is optional for vendors; may or may not be implemented</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="note accent">
+        <div class="nh">The effects trade-off, named up front</div>
+        <p>Going Matter-local usually means giving up the vendor app's canned effects (candle flicker,
+        music sync, rainbow fade). What you get back is that the light works when the internet doesn't,
+        responds in milliseconds instead of via a round-trip to someone's cloud, and cannot be
+        deprecated out from under you. Rebuilding a candle flicker as an HA script is an afternoon;
+        getting an abandoned cloud bulb back is not possible at all.</p>
+      </div>
+    </section>
+
+    <section id="prove">
+      <h2>6. Proving it is really local</h2>
+      <p>Do not take "it's Matter, so it's local" on faith — verify it, once:</p>
+      <ol>
+        <li><strong>Block the bulbs at the firewall.</strong> Deny the bulbs' addresses all WAN egress.</li>
+        <li><strong>Toggle from HA.</strong> It should work, instantly and unchanged.</li>
+        <li><strong>Harder version — pull the internet entirely.</strong> Unplug the WAN. HA → bulb must
+        still work. If it does, the control path is genuinely local end to end.</li>
+        <li><strong>Watch what they phone.</strong> Log outbound connection attempts for a day. A Matter
+        bulb on a local fabric should be near-silent — NTP, maybe a DNS lookup or an OTA check. Anything
+        resembling a persistent TLS session to a vendor endpoint is worth investigating.</li>
+      </ol>
+      <div class="note good">
+        <div class="nh">Then leave the block in place</div>
+        <p>There is no feature on the far side of that firewall rule that you want.</p>
+      </div>
+    </section>
+
+    <section id="fallback">
+      <h2>7. Fallback paths if it is NOT Matter</h2>
+      <p>If the 60-second test comes back negative — no <code>MT:</code> payload, no
+      <code>_matterc._udp</code>, Alexa/Google only — then this is the non-Matter Consciot line and the
+      job gets substantially harder. Ranked by effort:</p>
+
+      <div class="tw">
+      <table>
+        <thead><tr><th>Path</th><th>Viability</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Matter, via a newer revision</strong></td><td>—</td><td>Check whether the exact ASIN shipped a revised, Matter-certified SKU. Returning a non-Matter 6-pack and buying the Matter one is <em>far</em> cheaper than any path below.</td></tr>
+          <tr><td><strong>LocalTuya / <code>tuya-local</code></strong></td><td><span class="badge b-wip">⚠️ UNLIKELY</span></td><td>Requires the device to actually be Tuya underneath. Current evidence says no. Would need local key extraction.</td></tr>
+          <tr><td><strong><code>tuya-cloudcutter</code></strong></td><td><span class="badge b-no">❌ RULED OUT</span></td><td><strong>Zero</strong> Consciot profiles in the device DB. Cloudcutter is vendor-keyed, not silicon-keyed — the right chip is not sufficient.</td></tr>
+          <tr><td><strong><code>tuya-convert</code></strong></td><td><span class="badge b-no">❌ N/A</span></td><td>Deprecated upstream, and inapplicable for the same vendor reason.</td></tr>
+          <tr><td><strong>ESPHome / OpenBK via OTA</strong></td><td><span class="badge b-wip">🚧 UNKNOWN</span></td><td>Depends on the silicon and whether an unauthenticated OTA path exists. Pending research.</td></tr>
+          <tr><td><strong>ESPHome / OpenBK via UART</strong></td><td><span class="badge b-wip">🚧 UNKNOWN</span></td><td>Always works eventually; costs an afternoon and a soldering iron per bulb — ×6. Pending research.</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="note danger">
+        <div class="nh">⚠️ Mains safety</div>
+        <p>Every path below the Matter line involves opening a bulb. An A19 bulb's driver board sits
+        directly on <strong>mains potential</strong> — there is no isolation transformer. The board can
+        hold a lethal charge in its bulk capacitor <strong>after</strong> it is unplugged. Never open a
+        bulb connected to mains, never probe a powered board, and discharge the bulk cap before touching
+        anything. If you are not already comfortable working on non-isolated mains circuitry, the correct
+        move is to return the bulbs and buy the Matter SKU.</p>
+      </div>
+    </section>
+
+    <section id="open">
+      <h2>8. Open questions</h2>
+      <p>Tracked here, resolved as research lands.</p>
+      <ul>
+        <li><strong>Is B0G6YFQDFW Matter-certified?</strong> Inferred from the four-ecosystem box copy;
+        needs the physical <code>MT:</code> payload or a CSA certification-database hit.</li>
+        <li><strong>What silicon is inside?</strong> Unknown. Determines every fallback path. 🚧</li>
+        <li><strong>Is there an unauthenticated OTA path?</strong> 🚧</li>
+        <li><strong>UART pad locations / flash procedure?</strong> 🚧</li>
+        <li><strong>Verified HA capability surface</strong> — colour temperature, or RGB only?</li>
+        <li><strong>Factory-reset gesture</strong> — 5 power cycles or 3?</li>
+        <li><strong>Does it implement Matter OTA?</strong> Affects whether firmware can be updated
+        without the vendor app.</li>
+      </ul>
+    </section>
+
+    <section id="credits">
+      <h2>9. Prior art &amp; credits</h2>
+
+      <h3>What makes the recommended path possible</h3>
+      <ul>
+        <li><a href="https://www.home-assistant.io/">Home Assistant</a>'s Matter integration and the
+        <a href="https://github.com/home-assistant-libs/python-matter-server">Python Matter Server</a>
+        — the local fabric controller doing the actual work here.</li>
+        <li><a href="https://csa-iot.org/">Connectivity Standards Alliance</a> — Matter itself. A budget
+        bulb that can be adopted by any controller, with no vendor cloud in the path, is the entire point
+        of the standard, and it is genuinely delivering on it.</li>
+        <li><a href="https://github.com/project-chip/connectedhomeip">project-chip/connectedhomeip</a> —
+        the reference SDK, and the source of the <code>chip-tool</code> diagnostics worth knowing about.</li>
+      </ul>
+
+      <h3>Context projects — investigated, and <em>not</em> applicable here</h3>
+      <ul>
+        <li><a href="https://github.com/tuya-cloudcutter/tuya-cloudcutter">tuya-cloudcutter</a> —
+        brilliant work, wrong vendor. Zero Consciot profiles. Listed so the next person does not spend an
+        evening discovering that independently.</li>
+        <li><a href="https://github.com/ct-Open-Source/tuya-convert">tuya-convert</a> — deprecated
+        upstream, and inapplicable for the same reason.</li>
+        <li><a href="https://esphome.io/">ESPHome</a> /
+        <a href="https://github.com/openshwprojects/OpenBK7231T_App">OpenBeken</a> — the destination if
+        this turns out to be the non-Matter line and a flash path is needed.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Disclaimer.</strong> This documents independent interoperability research on hardware the
+    author purchased. No affiliation with Consciot, AiDot, Amazon, or the Connectivity Standards Alliance.
+    Opening a mains-powered bulb voids its warranty and carries a real risk of electric shock and fire.
+    Everything in §7 is at your own risk — the recommended path involves no disassembly and no warranty impact.</p>
+    <div class="foot-links">
+      <a href="https://github.com/jphein/consciot-a19-smartbulb">Source on GitHub</a>
+      <a href="https://github.com/jphein/consciot-a19-smartbulb/blob/main/LICENSE">MIT License</a>
+      <span>© 2026 JP (@jphein)</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

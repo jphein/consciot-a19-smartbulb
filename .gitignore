@@ -1,0 +1,47 @@
+# ─── Secrets — never commit ───────────────────────────────────────────────────
+secrets.yaml
+secrets.yml
+.env
+.env.*
+*.key
+*.pem
+
+# ─── Firmware images & backups — large, device-specific, may embed credentials ─
+*.bin
+*.uf2
+*.hex
+*_backup*
+*-backup*
+backups/
+
+# ─── Matter / commissioning material — device-identifying, never publish ──────
+# Setup codes, QR payloads and DACs are per-device secrets: anyone with the code
+# can commission the bulb onto their own fabric.
+setup-codes*
+*-qr.png
+*.chip
+pairing-codes*
+
+# ─── Local-only source material ───────────────────────────────────────────────
+# research/  — live agent scratch notes; contain the real IoT SSID + LAN addressing.
+#              Findings are synthesized into README.md (scrubbed) instead.
+# prior-art/ — vendored upstream clones (their own git repos), not ours to ship.
+research/
+prior-art/
+
+# ─── ESPHome build artifacts ──────────────────────────────────────────────────
+.esphome/
+.esphome*/
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ─── Editor / OS cruft ────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
