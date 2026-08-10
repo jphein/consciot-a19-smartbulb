@@ -144,9 +144,27 @@ file is unrecoverable.**
 gpg --decrypt aidot-keys-<stamp>.json.gpg > /dev/shm/keys.json   # tmpfs, not disk
 ```
 
-Yields per bulb: `id`, `name`, `mac`, `modelId`, `password`, `aesKey`, `manual_ip`.
+Yields the account `user_id` plus, per bulb: `id`, `name`, `mac`, `modelId`, `password`,
+`aesKey`, `manual_ip`.
+
+⚠️ **The credential set is a quadruplet, not a triplet:**
+
+```
+userId  +  deviceId  +  password  +  aesKey
+```
+
+The local TCP login payload is `{userId, password}`, so **the account user id is
+required** — without it the bulb answers `[Errno 104] Connection reset by peer`. This was
+found by restoring a backup and driving real hardware with it; a backup missing that field
+looks healthy and verifies its own integrity, then fails exactly when you need it. The
+script captures it and warns loudly if it is absent. Account access/refresh **tokens**
+remain excluded — only the non-secret `id` is stored.
+
 That is everything needed to drive the bulb over TCP `:10000` — via this integration,
 or via any client you write against `python-aidot`. Shred the plaintext afterwards.
+
+> **Re-run the backup if you made one before this fix.** An earlier backup that lacks
+> `user_id` will decrypt cleanly and still be unusable. Keep the newer file.
 
 ## Acceptance test — prove it is actually local
 

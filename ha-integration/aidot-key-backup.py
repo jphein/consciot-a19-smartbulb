@@ -76,6 +76,13 @@ for entry in blob.get("data", {}).get("entries", []):
         continue
     data = entry.get("data") or {}
     manual_ips = data.get("manual_ips") or {}
+
+    # The account user id is REQUIRED for the local TCP login handshake -- the bulb
+    # resets the connection without it, so a backup of only the per-device triplet
+    # is NOT restorable. Verified against real hardware 2026-08-09.
+    # `login_response` is the fork's key; core stores login info at the top level.
+    login_info = data.get("login_response") or data
+    user_id = login_info.get("id") if isinstance(login_info, dict) else None
     devices = []
     for dev in data.get("device_list") or []:
         aes = dev.get("aesKey")
@@ -96,11 +103,13 @@ for entry in blob.get("data", {}).get("entries", []):
     out["entries"].append({
         "entry_id": entry.get("entry_id"),
         "title": entry.get("title"),
+        "user_id": user_id,
         "device_count": len(devices),
         "devices": devices,
     })
 
-# NOTE: login_response / account token deliberately NOT emitted.
+# NOTE: the account ACCESS/REFRESH TOKENS are deliberately NOT emitted -- only the
+# non-secret `id`, which local login requires.
 print(json.dumps(out))
 '''
 
@@ -252,7 +261,14 @@ def main() -> int:
     )
 
     print(f"Found {len(entries)} aidot config entry/entries, {total} device(s).")
+    missing_uid = [e for e in entries if not e.get("user_id")]
+    if missing_uid:
+        print("WARNING: an entry has no account user_id. Local login WILL be rejected "
+              "by the bulbs ('Connection reset by peer') -- this backup would not be "
+              "restorable. Re-check the integration setup.", file=sys.stderr)
     for e in entries:
+        print(f"  entry {e.get('title')}: user_id="
+              f"{'present' if e.get('user_id') else 'MISSING'}")
         for d in e["devices"]:
             have = "OK  " if (d.get("password") and d.get("aesKey")) else "MISSING"
             ip = d.get("manual_ip") or "-"
