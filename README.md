@@ -3,402 +3,547 @@
 **Device:** Consciot A19 Smart Light Bulb · Amazon **B0G6YFQDFW** · 800 lm · 60 W-equivalent ·
 RGB color-changing · E26 A19 · dimmable · 2.4 GHz Wi-Fi · sold as a 6-pack
 **Box copy:** *"Works with Apple Home, Alexa, Google Home & SmartThings"*
-**Goal:** all six bulbs in Home Assistant, **fully local** — no vendor cloud, no vendor app
-dependency, no internet required to turn on a light.
-
-> ### 🚧 Research in progress
-> This document is written alongside an active teardown/identification effort. Anything not yet
-> confirmed against the physical hardware is marked **🚧**. The headline recommendation below is
-> an evidence-backed *hypothesis* with a 60-second confirmation test — run the test before you
-> plan around it.
+**Goal:** all six bulbs in Home Assistant, **fully local** — no vendor cloud, no vendor app, no
+internet required to turn on a light.
 
 ---
 
-## TL;DR — the recommended path
+## TL;DR — commission them as Matter devices. That's it.
 
-**Commission the bulbs as Matter-over-Wi-Fi devices directly into Home Assistant.** No flashing,
-no soldering, no vendor cloud account, no custom integration.
+**This bulb is Matter-certified.** Home Assistant speaks Matter natively and locally. There is no
+exploit to land, no OTA window to race, no UART pads to solder, no vendor account to create.
 
-If the Matter identification holds (see §1), this device is *dramatically* easier to liberate
-than the usual budget Wi-Fi bulb. There is no exploit to land, no OTA window to race, no UART
-pads to solder. Matter is a local-by-design protocol: once a bulb is commissioned onto Home
-Assistant's fabric, control never leaves your LAN, and the vendor app becomes optional — you can
-delete it.
+> **Do not flash this bulb.** The recommendation *inverts* relative to the usual cheap-Wi-Fi-bulb
+> project: flashing a Matter device is actively destructive. See [§9](#9-flashing--ruled-out).
 
 ```
-Bulb ──(Matter over Wi-Fi, IPv6, local)──> Matter Server add-on ──> Home Assistant
+Bulb ──(Matter over Wi-Fi · local IPv6)──> Matter Server add-on ──> Home Assistant
                                                                      └── light.* entity
-   no cloud ·  no account · works with the WAN unplugged
+   no cloud · no account · no vendor app · works with the WAN unplugged
 ```
 
-**Confidence:** high on *"this is the Matter line"*, not yet **verified on the bulb in hand**.
-Confirm with §1.2 before buying six more.
+**Primary-source proof** — CSA certified-products database, *"Consciot Smart Light Bulb"*:
+
+| Field | Value |
+|---|---|
+| Company | **AiDot Inc.** |
+| Vendor ID (VID) | **`0x1396`** |
+| Product ID (PID) | **`0x11BA`** |
+| Certification ID | **CSA2609OMAT49756-24** |
+| Certified | **2026-01-30** |
+| Matter spec | **1.5** |
+| Transport | **Wi-Fi + Bluetooth** (BLE carries commissioning) |
+| Device type | **Extended Color Light** (`0x010D`) |
+| Family SKU / variant | `LS0102603211A` / `CS01271101` |
+
+Corroboration: AiDot holds **136 Matter 1.5 certifications** for smart lighting. Consciot, Linkind
+and OREiN are all AiDot brands, and all three have Matter bulb entries in the CSA database.
+
+**One open item, and it is the only thing that changes the recommendation:** Consciot ships two
+parallel SKU lines, and this exact ASIN is new enough that its listing could not be read directly.
+[§2](#2--which-sku-do-you-have) has three tests that settle it in under a minute.
 
 ---
 
 ## Contents
 
-- [1. What this bulb actually is](#1-what-this-bulb-actually-is)
-- [2. Path 1 — Matter over Wi-Fi ✅ recommended](#2-path-1--matter-over-wi-fi--recommended)
-- [3. Network prerequisites (the part that actually bites)](#3-network-prerequisites-the-part-that-actually-bites)
-- [4. Doing all six](#4-doing-all-six)
-- [5. What you get in Home Assistant](#5-what-you-get-in-home-assistant)
-- [6. Proving it is really local](#6-proving-it-is-really-local)
-- [7. Fallback paths if it is NOT Matter](#7-fallback-paths-if-it-is-not-matter)
-- [8. Open questions](#8-open-questions)
-- [9. Prior art & credits](#9-prior-art--credits)
+- [1. Why we know it's Matter](#1-why-we-know-its-matter)
+- [2. 🚧 Which SKU do you have?](#2--which-sku-do-you-have)
+- [3. Four myths that send people the wrong way](#3-four-myths-that-send-people-the-wrong-way)
+- [4. Path A — Matter commissioning ✅ recommended](#4-path-a--matter-commissioning--recommended)
+- [5. Network prerequisites (the part that actually bites)](#5-network-prerequisites-the-part-that-actually-bites)
+- [6. Doing all six](#6-doing-all-six)
+- [7. What you get in Home Assistant](#7-what-you-get-in-home-assistant)
+- [8. Path B — if there is no Matter code](#8-path-b--if-there-is-no-matter-code)
+- [9. Flashing — ruled out](#9-flashing--ruled-out)
+- [10. Open questions](#10-open-questions)
+- [11. Prior art & credits](#11-prior-art--credits)
 
 ---
 
-## 1. What this bulb actually is
+## 1. Why we know it's Matter
 
-### 1.1 The evidence
+**The CSA certificate above is the primary source** — not an inference, not a listing claim. A
+Matter certification is issued per product, carries a vendor ID assigned to a real company, and is
+publicly queryable. AiDot Inc. holds VID `0x1396` in its own name.
 
-**Consciot is an AiDot-platform brand, not (apparently) a Tuya rebadge.**
-Consciot listings direct buyers to the **AiDot** app. AiDot is a smart-home brand family whose
-siblings include **Linkind, Orein, and Winees**. That matters for expectations: the entire
-Tuya-liberation toolchain everyone reaches for first — `tuya-cloudcutter`, `tuya-convert`,
-LocalTuya — is keyed to Tuya's firmware and cloud, and
+**The manufacturing chain is a tier-1 ODM, not a white-label shop.** The Consciot A19 manual names
+**Leedarson IoT Technology Inc.** (Xiamen) as producer — a tier-1 lighting ODM that builds for
+major brands (FCC grantee codes `2AB2Q`, `2AVZB`). AiDot's own FCC grantee code is `2BLWS`.
 
-> **Consciot appears 0 times in the `tuya-cloudcutter` device database** — 1,149 device profiles,
-> grepped locally, zero hits.
+**It is definitively not Tuya**, which matters because the entire toolchain most people reach for
+first — `tuya-cloudcutter`, `tuya-convert`, LocalTuya — is keyed to Tuya's firmware and cloud:
 
-So the reflexive *"cheap Wi-Fi bulb = Tuya OEM"* assumption is **not supported** for this brand.
-Plan around Matter, not around cloudcutter.
+- **Zero hits for "Consciot"** across all **1,149 device profiles** in the `tuya-cloudcutter`
+  device database.
+- AiDot holds its **own CSA Vendor ID** and ships its **own app**. A Tuya OEM would appear under
+  Tuya's VID and the Smart Life app.
+- ⇒ `tuya-convert` and `tuya-cloudcutter` **do not apply**, and a Tuya `local_key` is something an
+  AiDot device has no way to possess.
 
-**Consciot ships two distinct product lines, and the ecosystem list on the box tells you which
-one you are holding.** The tell is *Apple Home* and *SmartThings*:
-
-| Line | Box says | Example ASINs |
-|---|---|---|
-| **Matter line** | "Matter-Certified" · Works with **Apple Home** / Siri / **SmartThings** | B0C4Y9L54Q, B0C4YDSSGQ, B0CB837NDQ, B0CBKJBLTF, B0CBMYZX3L |
-| **Non-Matter line** | Works with Alexa & Google Home **only** | B0BYNFG5S4, B0C5M1FSQZ, B0CDC3SQSB |
-
-**Our ASIN (B0G6YFQDFW) lists all four ecosystems, including Apple Home and SmartThings → it
-matches the Matter line.**
-
-The reasoning behind that inference is worth stating explicitly, because it is the load-bearing
-step: **Apple Home support on a budget Wi-Fi bulb effectively requires Matter.** The only
-pre-Matter way to speak to Apple Home was HomeKit-native (HAP over Wi-Fi), which required
-per-device **MFi certification** — a licensing and hardware-attestation burden that a no-name ODM
-selling six bulbs for the price of one Hue does not carry. Alexa and Google Home both have
-cloud-to-cloud paths that any vendor can implement; Apple Home does not. So "Works with Apple
-Home" on a non-hub, non-Thread Wi-Fi bulb is a strong Matter-over-Wi-Fi signal.
-
-### 1.2 Confirm it in 60 seconds — do this first
-
-Three independent checks, cheapest first. Any one of them settles it.
-
-1. **Look for the Matter logo and setup code.** A Matter device *must* carry a commissioning
-   payload. Check the bulb's plastic body, the box, and the paper insert for:
-   - the Matter mark (three interlocking arrows forming a triangle), and
-   - an **11-digit numeric setup code** (often printed as `1234-567-8901`) and/or a **QR code**
-     whose payload begins with `MT:`.
-
-   An 11-digit code beginning its QR payload with `MT:` is conclusive — that is a Matter onboarding
-   payload and nothing else uses that format.
-
-2. **Look for `_matterc._udp` on the network.** Power on a factory-fresh bulb and watch mDNS.
-   A commissionable Matter device advertises `_matterc._udp`; a commissioned one advertises
-   `_matter._tcp`.
-
-   ```bash
-   # Commissionable (not yet paired) Matter devices:
-   avahi-browse -rt _matterc._udp
-   # Already-commissioned Matter devices:
-   avahi-browse -rt _matter._tcp
-   ```
-
-3. **Check the app's own words.** If the AiDot app offers "Add to Apple Home / SmartThings" or
-   surfaces a *"Matter setup code"* / *"pairing mode"* screen, it is Matter.
-
-> ### 📸 Photograph every setup code before you install the bulbs
-> This is the single most valuable 30 seconds in this whole document. The Matter setup code is
-> printed **on the bulb itself** — and becomes permanently unreadable the moment the bulb is
-> screwed into a recessed can, a globe fixture, or anything face-up. Lay all six out, photograph
-> every code, and store the photos somewhere you will still have them in two years. Losing the
-> code does not brick the bulb, but re-commissioning it after a factory reset means taking the
-> fixture apart.
->
-> **Treat those photos as secrets.** A Matter setup code is a commissioning credential: anyone who
-> has it and is in radio range of an uncommissioned bulb can join it to *their* fabric. Never
-> commit them, never post them in a screenshot.
+**Why the box copy is corroborating evidence:** "Works with Apple Home" on a budget Wi-Fi bulb
+effectively requires Matter. The only pre-Matter route to Apple Home was HomeKit-native (HAP over
+Wi-Fi), which required per-device **MFi certification** — a licensing and hardware-attestation
+burden a no-name ODM selling six bulbs for the price of one Hue does not carry. Alexa and Google
+both have cloud-to-cloud paths any vendor can implement; Apple Home does not. "**& SmartThings**"
+is the same tell, and in AiDot's catalogue that phrase appears only on Matter SKUs.
 
 ---
 
-## 2. Path 1 — Matter over Wi-Fi ✅ recommended
+## 2. 🚧 Which SKU do you have?
+
+**Status: owner confirming.** Consciot ships a Matter line *and* a legacy non-Matter Wi-Fi line.
+The CSA record proves *a* Consciot A19 is Matter-certified; confirming that **your** box is that
+SKU takes under a minute. Three independent tests, any one of which settles it.
+
+### Test 1 — the Matter setup code (easiest, needs nothing)
+
+Look on the **bulb itself** (usually printed on the plastic diffuser skirt near the base) and on
+the box for:
+
+- the **Matter logo** — three interlocking arrows forming a triangle
+- a **QR code**, and/or an **11-digit numeric setup code** formatted `1234-567-8901`
+
+**Present → it is Matter. Done.** No teardown, no chip ID, nothing else needed. A non-Matter AiDot
+bulb has no such code. If the model number on the box resembles `LS0102603211A` / `CS01271101`,
+that is further confirmation.
+
+### Test 2 — a BLE scan (decisive, works without the box)
+
+A Matter device in commissioning mode advertises over BLE with **service UUID `0xFFF6`**, and the
+payload encodes the discriminator, **Vendor ID and Product ID**. This discriminates every remaining
+hypothesis at once:
+
+```bash
+sudo btmgmt find -l                  # LE scan — look for UUID FFF6 in the AD data
+# or
+bluetoothctl --timeout 20 scan le    # then: bluetoothctl info <address>
+```
+
+| Scan result | Verdict |
+|---|---|
+| Advert with **UUID `0xFFF6`** | **Matter.** The payload's VID should read **`0x1396` = AiDot**, confirming the SKU too |
+| Advert with **Tuya manufacturer data**, no `0xFFF6` | Tuya BLE-assisted → not Matter (and not expected here) |
+| **No BLE advertising at all** | Legacy Wi-Fi SmartConfig bulb → not Matter → [§8](#8-path-b--if-there-is-no-matter-code) |
+
+> ⏱️ **Power-cycle the bulb immediately before scanning.** Many implementations advertise only
+> during a ~15-minute commissioning window after power-up; a bulb that has been powered for hours
+> may have gone quiet. Any phone BLE scanner (nRF Connect, LightBlue) works equally well.
+
+### Test 3 — ask Apple Home (zero setup)
+
+Open **Apple Home** → *Add Accessory* → **Matter**. If the bulb appears, it is Matter — Apple Home
+is the one ecosystem in the packaging list that a non-Matter budget bulb cannot possibly join.
+
+**Path selector:** code/`0xFFF6`/Apple Home present → **[Path A](#4-path-a--matter-commissioning--recommended)**.
+Definitively absent → **[Path B](#8-path-b--if-there-is-no-matter-code)**.
+
+---
+
+## 3. Four myths that send people the wrong way
+
+Each of these has sent someone down a dead end on this exact device.
+
+| Myth | Reality |
+|---|---|
+| *"It works with the AiDot app, so it isn't Matter."* | **False.** AiDot's Matter bulbs work with the AiDot app *too*. A vendor app is not evidence against Matter — and AiDot Inc. is the company on the Matter certificate. |
+| *"It's a Wi-Fi bulb, so it isn't Matter."* | **False.** Matter runs **over** Wi-Fi. Matter-over-Wi-Fi and Matter-over-Thread are both Matter; this is the Wi-Fi kind. |
+| *"It broadcasts no setup Wi-Fi network, so it's a Tuya SmartConfig bulb."* | **Backwards.** **Matter devices never broadcast a SoftAP** — commissioning happens over BLE, then the device is handed Wi-Fi credentials. No AP is *consistent with* Matter. It rules out Tuya **AP mode** specifically, and nothing else. |
+| *"Cheap Wi-Fi bulb ⇒ Tuya ⇒ use cloudcutter."* | **False here.** Zero Consciot profiles in 1,149. Wrong vendor entirely — see [§1](#1-why-we-know-its-matter). |
+
+---
+
+## 4. Path A — Matter commissioning ✅ recommended
 
 ### What you need
 
 | | |
 |---|---|
-| **Home Assistant** | 2023.x or newer (any modern release). HAOS or Supervised is the easy road. |
-| **Matter Server** | The **Matter Server** add-on (Settings → Add-ons → Add-on Store → *Matter Server*), plus the **Matter (BETA)** integration. On HAOS this is a two-click install. |
-| **A phone with the HA Companion app** | Required. Commissioning is **Bluetooth-assisted** — the phone talks BLE to the bulb to hand over Wi-Fi credentials. There is no browser-only path. |
-| **Bluetooth on the phone** | Just for the ~30 seconds of commissioning. Not needed afterwards. |
-| **2.4 GHz Wi-Fi** | The bulb is 2.4 GHz-only. See §3. |
-| **IPv6 on the LAN** | **Non-negotiable.** See §3 — this is the #1 cause of Matter failures. |
+| **Home Assistant** | Any modern release. HAOS or Supervised is the easy road. |
+| **Matter Server** | The **Matter Server** add-on (Settings → Add-ons → Add-on Store), plus the **Matter** integration. Two clicks on HAOS. |
+| **A way to reach the bulb over BLE** | Either an **existing ESPHome/Shelly BLE proxy** (best — see below) or a phone with the HA Companion app. |
+| **2.4 GHz Wi-Fi** | The bulb is 2.4 GHz-only. See [§5](#5-network-prerequisites-the-part-that-actually-bites). |
+| **IPv6 on the LAN** | **Non-negotiable.** See §5 — the #1 cause of Matter failures. |
 
-You do **not** need: a Thread border router (this is Wi-Fi Matter, not Thread), a hub, a bridge,
-an AiDot account, or an internet connection.
+You do **not** need: a Thread border router (this is Wi-Fi Matter), a hub, a bridge, an AiDot
+account, the vendor app, or an internet connection.
 
-### Step 1 — install the Matter server
+### ⭐ The good option: phone-free commissioning via BLE proxy
 
-Settings → Add-ons → Add-on Store → **Matter Server** → Install → Start (enable *Start on boot*
-and *Watchdog*). Then Settings → Devices & Services → **Add Integration** → **Matter** → accept
-the default (use the local add-on).
+**Matter Server add-on ≥ 8.5.0 can commission through Home Assistant's own Bluetooth stack**,
+including **ESPHome and Shelly BLE proxies**. If you already run BLE proxies for Bluetooth sensors,
+you have everything you need — and for six identical bulbs this turns six phone dances into six
+paste-a-code-in-the-UI operations.
 
-### Step 2 — factory-reset the bulb
+1. **Settings → Add-ons → Matter Server → Configuration** → enable **`ble_proxy`**
+   ("Enable BLE proxy"). Leave `beta` off unless the toggle is missing. **Take a backup first** —
+   9.x migrates its data store on first start.
+2. Restart the add-on.
 
-A bulb fresh from the box is already commissionable. A bulb that has ever been paired to the
-vendor app is not, and must be reset first.
+> Note: **BLE-proxy mode and a local Bluetooth adapter are mutually exclusive.** If HA has a USB
+> Bluetooth dongle configured, the proxy path takes precedence anyway.
 
-**🚧 The exact reset gesture for this model is unconfirmed.** The near-universal convention for
-Wi-Fi bulbs — and the AiDot family's documented method — is a **power cycle count**: switch the
-bulb **on for ~1 second, off for ~1 second, repeated 5 times**, leaving it on the 5th. The bulb
-confirms by **blinking or cycling color**. Some AiDot models use 3 cycles instead of 5. If 5 does
-nothing, try 3.
+### Commission bulb #1
 
-Confirmation that it worked: the bulb starts advertising `_matterc._udp` (check 2 in §1.2).
+1. Screw in **one** bulb, powered on, **within BLE range of a proxy**. Factory-fresh bulbs enter
+   pairing mode automatically.
+2. **Settings → Devices & Services → Matter → Add device.**
+3. Choose **"No, it's new."**
+4. Enter the **11-digit setup code** (or scan the QR). HA will ask for the **Wi-Fi SSID and
+   password** to hand the bulb over BLE.
+   > ⚠️ **This is the step that decides which network the bulb lands on.** If you run a separate
+   > IoT network, give it *that* SSID. Getting this wrong is the main way to end up with a bulb on
+   > the wrong segment and an unexplained "commissioned but offline" bulb.
+5. Wait — commissioning takes a couple of minutes.
+6. Name it and finish.
 
-### Step 3 — commission it into Home Assistant
+### 🛑 Verify bulb #1 before doing the other five
 
-Open the **Home Assistant Companion app** on your phone (not the browser), then:
+Do not commission all six and *then* discover a problem. Confirm:
 
-> Settings → Devices & Services → **Add Integration** → **Matter** → **Add Matter device**
-> → scan the QR code (or tap *"I don't have a QR code"* and type the 11-digit setup code)
+- The `light.*` entity appears and responds to on/off, brightness, **and color**.
+- The bulb picked up an address on the network segment you intended.
+- **It survives a power-cycle plus five minutes and comes back online by itself.**
 
-The phone does the rest: BLE handshake → hands the bulb your Wi-Fi credentials → the bulb joins
-2.4 GHz → HA's Matter fabric adopts it → a `light.*` entity appears. Typically 30–90 seconds.
+That last one is the real test, and it is easy to skip. Commissioning succeeding only proves the
+BLE path worked; **coming back after a power-cycle is what proves mDNS and IPv6 discovery work on
+that segment.** A bulb that commissions and then never returns is the single most common Matter
+failure, and you would much rather find it on bulb one than bulb six.
 
-**Platform notes:**
+### If BLE proxy commissioning misbehaves
 
-- **Android** — commissioning runs through Google Play Services' Matter module. The Google Home
-  app may need to be installed (not necessarily used) for that module to be present. Android will
-  often show its own Google-branded pairing sheet mid-flow; that is expected and does **not** mean
-  the bulb is being joined to Google's cloud.
-- **iOS** — the HA Companion app can commission directly. Alternatively, pair to **Apple Home**
-  first, then share to HA via Matter **multi-admin**: in the Home app, open the accessory →
-  Settings → *Turn On Pairing Mode* → Apple generates a **new, one-time setup code** → type that
-  into HA. Both approaches end at the same place.
+**Phone flow:** HA Companion app → Settings → Matter → Add device → "No, it's new." Requires
+Android 8.1+ (12+ recommended, Location set to "Allow all the time") or iOS 16+. **The phone must
+be joined to the target 2.4 GHz network during commissioning** — Android's commissioner hands the
+device the phone's *current* Wi-Fi credentials. Move the phone back afterwards.
 
-### Step 4 — delete the vendor app
+**If HA can't do BLE at all — the network-commissioning trick:** commission into **Apple Home**
+first (iPhone scans the QR; the phone must be on the target network), then in Apple Home use
+**Share / Add to other ecosystem** to generate a fresh setup code. In HA choose **"Yes, it's
+already in use."** HA then commissions **over the network** — no BLE needed at all, because the
+bulb is already on Wi-Fi. Matter's multi-fabric support means the bulb lives in both ecosystems
+simultaneously, and **it stays fully local in HA either way.**
 
-Once the bulb is on HA's fabric, the AiDot app is dead weight. Matter devices do not need it, and
-nothing in HA's control path traverses it. Uninstalling the app does not un-commission the bulb.
-
-> **Multi-admin, and why you might keep a second controller:** Matter devices support a limited
-> number of simultaneous fabrics — commonly **5**. Each ecosystem you add (HA, Apple Home, Alexa,
-> Google, SmartThings) consumes one slot. For an all-local setup, use exactly one: Home Assistant.
-> If you want Siri too, add Apple Home as a second and stop there.
+> **Fabric budget:** Matter devices support a limited number of simultaneous fabrics — commonly
+> **5**. Each ecosystem you add consumes one. For an all-local setup, use exactly one: Home
+> Assistant. If you want Siri too, add Apple Home as a second and stop there.
 
 ---
 
-## 3. Network prerequisites (the part that actually bites)
+## 5. Network prerequisites (the part that actually bites)
 
-Matter commissioning failures are almost never the bulb. They are almost always one of these
-three, in this order of frequency.
+Matter commissioning failures are almost never the bulb. They are almost always one of these three.
 
-### 3.1 IPv6 is mandatory — this is the #1 failure cause
+### 5.1 IPv6 is mandatory — the #1 failure cause
 
-**Matter's operational transport is IPv6-only.** There is no IPv4 fallback. If your LAN has IPv6
-disabled — a very common "hardening" choice on IoT segments — commissioning will appear to
-succeed and then the device will be permanently unreachable, or it will fail at the final step
-with an unhelpful timeout.
+**Matter's operational transport is IPv6-only.** There is no IPv4 fallback. If IPv6 is disabled on
+the segment — a very common "hardening" choice on IoT networks — commissioning can appear to
+succeed and the device is then permanently unreachable.
 
-What must be true:
-
-- IPv6 enabled on the network segment the bulb lands on. **Link-local (`fe80::/10`) is sufficient**
-  — you do not need a global prefix, ULA, or any ISP delegation.
-- **Router Advertisements (RA) reaching that segment**, so devices configure themselves.
-- **MLD snooping** either working correctly or switched off. Broken MLD snooping silently eats the
-  IPv6 multicast that Matter's mDNS depends on, and is a genuinely nasty failure mode because
+- **Link-local (`fe80::/10`) is sufficient** when commissioner and device share an L2 segment. You
+  do not need a global prefix, ULA, or ISP delegation.
+- **Router Advertisements** should reach the segment.
+- **MLD snooping** must either work correctly or be switched off. Broken MLD snooping silently eats
+  the IPv6 multicast that Matter's mDNS depends on — a genuinely nasty failure mode, because
   everything else on the network looks fine.
 
-### 3.2 mDNS must reach Home Assistant
+### 5.2 mDNS must reach Home Assistant
 
-Matter discovery is mDNS (`_matterc._udp` before commissioning, `_matter._tcp` after). HA's Matter
-server must be able to see those advertisements.
+Discovery is mDNS: `_matterc._udp` before commissioning, `_matter._tcp` after.
 
-- **Simplest, most reliable:** put the bulbs on the **same L2 segment / VLAN** as Home Assistant.
-- **If your IoT devices live on a separate VLAN** (a good practice, and worth keeping): you need an
-  **mDNS reflector / Avahi repeater** bridging the HA segment and the IoT segment, **for IPv6 as
-  well as IPv4**, plus firewall rules permitting the Matter operational traffic between them. Many
-  mDNS reflectors default to IPv4-only — which reflects just enough for the device to be
+```bash
+avahi-browse -rt _matterc._udp    # commissionable (not yet paired)
+avahi-browse -rt _matter._tcp     # already commissioned
+```
+
+- **Simplest and most reliable:** put the bulbs on the **same L2 segment as Home Assistant**. If
+  your HA host is multi-homed with a real NIC on the IoT segment, you already satisfy this — no
+  mDNS reflector, no IPv6 ULA plumbing, no firewall holes.
+- **Separate IoT VLAN, HA not present on it:** you need an **mDNS reflector / Avahi repeater**
+  bridging both segments **for IPv6 as well as IPv4**, plus firewall rules for Matter operational
+  traffic. Many reflectors default to IPv4-only — which reflects just enough for the device to be
   *discovered* and not enough for it to *work*.
-- **Host networking:** the Matter Server add-on needs host-level network access to see multicast.
-  The stock HAOS add-on is configured correctly out of the box; hand-rolled Docker setups are the
-  ones that break here.
+- **Host networking:** the Matter Server container needs host network mode to see multicast. The
+  stock HAOS add-on is correct out of the box; hand-rolled Docker setups are what break here.
+- **On the AP:** check **multicast / IGMP-MLD snooping** and **client isolation** on the IoT SSID.
+  Aggressive isolation can drop the multicast Matter needs.
 
-> **The honest recommendation:** if you run a segmented network, commission the bulbs on the same
-> VLAN as HA and *then* decide whether moving them is worth the reflector debugging. Commissioning
-> across VLANs is the hardest version of this task, and it is optional.
+> **Interface selection on multi-NIC hosts:** older guidance about a `--primary-interface` flag is
+> from the python-matter-server era. Add-on 9.x is the matter.js rewrite, which normally binds
+> **all** interfaces — which is what you want. **Do not set it speculatively.** If, and only if,
+> bulbs commission but then show offline, that is the knob to investigate.
 
-### 3.3 2.4 GHz band steering
+### 5.3 2.4 GHz band steering
 
-The bulb is 2.4 GHz-only. If your SSID is a single band-steered name covering 2.4 and 5 GHz, the
-credential handoff can succeed while the join fails, because the bulb is handed an SSID it then
-cannot find on a band it can hear.
-
-Fixes, in order of preference:
+The bulb is 2.4 GHz-only. (The CSA family entry confusingly says "dual-band 2.4G and 5G"; the
+product listings say 2.4 GHz.) If your SSID is a single band-steered name, the credential handoff
+can succeed while the join fails — the bulb is handed an SSID it cannot find on a band it can hear.
 
 1. Use a **dedicated 2.4 GHz SSID** (an IoT SSID is the clean answer).
-2. Temporarily disable the 5 GHz radio for the duration of commissioning, then re-enable it.
-3. Move the phone and bulb close to the AP so 2.4 GHz is the strongest candidate.
+2. Or temporarily disable the 5 GHz radio during commissioning.
+3. Or move phone and bulb close to the AP.
 
 ---
 
-## 4. Doing all six
+## 6. Doing all six
 
-Six bulbs is six commissioning runs — there is no bulk-import path. What makes it painless:
+There is no bulk-commission mechanism in Matter — each bulb needs its own code, so it is six runs
+at roughly 2–3 minutes each.
 
-1. **Do them all on a bench first, before installing.** One lamp, or a bare socket adapter. Screw
-   in bulb → photograph the code → commission → rename in HA → unscrew → next. All six in ~15
-   minutes, all with the codes still readable.
-2. **Rename each entity as you go**, while you still know which physical bulb it is. After they are
-   in fixtures, `light.consciot_a19_4` tells you nothing. Name them for where they are going —
-   `light.kitchen_can_1` — not for what they are.
+1. **Do them on a bench first, before installing.** One lamp or a bare socket adapter. Screw in →
+   photograph the code → commission → rename → unscrew → next.
+2. **Rename each entity as you go**, while you still know which physical bulb it is. Name them for
+   *where they are going* — `light.kitchen_can_1` — not for what they are.
 3. **Label the bulbs physically.** A marker dot on the base matching the HA name saves a real
    diagnostic afternoon later.
-4. **Group them once they are up:**
+4. **Group them:**
 
 ```yaml
-# configuration.yaml — one switch, six bulbs
+# configuration.yaml
 light:
   - platform: group
-    name: Kitchen Cans
+    name: "Consciot Bulbs"
     entities:
       - light.kitchen_can_1
       - light.kitchen_can_2
       - light.kitchen_can_3
 ```
 
-> **Sending one command to six bulbs is six unicast messages.** Matter over Wi-Fi has no broadcast
-> group primitive in this path, so a group turn-on is inherently a little staggered. It is usually
-> imperceptible; on a slow or congested 2.4 GHz band it can become a visible ripple. If that
-> bothers you, the fix is RF conditions (AP placement, channel width, fewer competing devices) —
-> not Home Assistant configuration.
+> ### 📸 Photograph every setup code before you install
+> The Matter setup code is printed **on the bulb itself**, and becomes permanently unreadable the
+> moment it is screwed into a recessed can or a globe fixture. *"If you reset your device you'll
+> need the QR code or numeric setup code to commission that device again."* Losing it does not
+> brick the bulb, but re-commissioning means taking the fixture apart.
+>
+> **Treat those photos as secrets.** A setup code is a commissioning credential: anyone with the
+> code, in radio range of an uncommissioned bulb, can join it to *their* fabric. Never commit them,
+> never post them in a screenshot.
+
+**Sending one command to six bulbs is six unicast messages.** Matter over Wi-Fi has no broadcast
+group primitive here, so a group turn-on is inherently a little staggered — usually imperceptible,
+occasionally a visible ripple on a congested 2.4 GHz band. The fix is RF conditions, not HA config.
 
 ---
 
-## 5. What you get in Home Assistant
+## 7. What you get in Home Assistant
 
-🚧 **Unverified against this hardware** — this is the Matter Color Temperature Light device-type
-baseline, which is what an RGB+tunable bulb of this class conventionally implements. To be
-replaced with a verified capability table.
+Device type `0x010D` **Extended Color Light** — the exact type that maps to brightness + RGB +
+color temperature — yields one `light.*` entity per bulb:
 
-| Capability | Expected | Notes |
+| Capability | Exposed as |
+|---|---|
+| On / off | `light.turn_on` / `light.turn_off` |
+| Brightness | `brightness` (0–255); `supported_color_modes` includes `hs`/`xy` |
+| Full RGB color | `rgb_color` / `hs_color` / `xy_color` |
+| Tunable white | `color_temp_kelvin`, ~**2700 K – 6500 K** |
+| Transitions | `transition`, per the Matter Level Control cluster |
+| Firmware updates | Possibly an `update.*` entity — Matter 1.5 with DCL enabled can surface OTA |
+
+Plus a device entry showing vendor **AiDot Inc.**, model, serial and firmware version. Commissioning
+one bulb and reading `0x1396` on its device page verifies identity *and* proves the end state
+works, in a single step.
+
+**No cloud. No account. No vendor app. No internet dependency.** Matter operational traffic is
+local IPv6 between Home Assistant and the bulbs.
+
+**What you give up versus the vendor app:** music-sync / microphone reactivity and vendor "scenes"
+are not Matter clusters, so they will not appear in HA. What you get back is a light that works
+when the internet doesn't, responds in milliseconds instead of via a round-trip to someone's cloud,
+and cannot be deprecated out from under you. Rebuilding a candle flicker as an HA script is an
+afternoon; recovering an abandoned cloud bulb is not possible at all.
+
+### Proving it is really local
+
+Verify once, then stop worrying:
+
+1. **Block the bulbs at the firewall** — deny them all WAN egress.
+2. **Toggle from HA.** Should work, instantly and unchanged.
+3. **Harder version:** unplug the WAN entirely. HA → bulb must still work.
+4. **Watch what they phone.** A Matter bulb on a local fabric should be near-silent.
+
+Then leave the block in place permanently. There is no feature on the far side of it that you want.
+
+---
+
+## 8. Path B — if there is no Matter code
+
+**Only if [§2](#2--which-sku-do-you-have) comes back definitively negative** — no setup code, no
+`0xFFF6` advert, and Apple Home refuses it. That means the legacy AiDot Wi-Fi SKU.
+
+**Do not reach for LocalTuya.** It is the tempting wrong turn, especially if you already have a
+`localtuya` install. Consciot is AiDot, not Tuya; these devices do not speak the Tuya local
+protocol and will not yield to Tuya local-key extraction.
+
+### There is no zero-cloud option on this branch — be clear-eyed about it
+
+The vendor is required **twice**, and both halves are currently unavoidable:
+
+| Half | What it does | Community replacement? |
 |---|---|---|
-| On / off | ✅ | Matter On/Off cluster |
-| Brightness | ✅ | Level Control cluster, 0–254 mapped to HA's 0–255 |
-| RGB color | ✅ | Color Control cluster — advertised as color-changing |
-| Color temperature | 🚧 | Likely, in mireds; depends on whether the bulb is RGB-only or RGBTW |
-| Transitions | ✅ | `transition:` supported by the Level Control cluster |
-| Vendor "scenes" / effects | ❌ | App-side effects are usually vendor-proprietary and do **not** cross the Matter boundary. Rebuild them as HA scripts. |
-| Power / energy metering | ❌ | Not present on bulbs in this class |
-| Firmware update from HA | 🚧 | Matter OTA Requestor is optional for vendors; may or may not be implemented |
+| **Provisioning** | The AiDot app pushes Wi-Fi credentials to a factory-fresh bulb | ❌ none exists |
+| **Key issuance** | The AiDot cloud issues the per-device `deviceId` + `password` + **`aesKey`** | ❌ none exists |
 
-**The effects trade-off is worth naming up front:** going Matter-local usually means giving up the
-vendor app's canned effects (candle flicker, music sync, rainbow fade). What you get back is that
-the light works when the internet doesn't, responds in milliseconds instead of via a round-trip to
-someone's cloud, and cannot be deprecated out from under you. Rebuilding a candle flicker as an HA
-script is an afternoon; getting an abandoned cloud bulb back is not possible at all.
+There is **no "AiDotTools" analogue** to the reverse-engineered tooling that exists for some other
+vendors. Nobody has reverse-engineered AiDot *provisioning*, and no library derives the local
+`aesKey` independently of the cloud. Because provisioning is BLE-assisted rather than a SoftAP HTTP
+flow, it is a substantially harder reverse-engineering target — which is likely why no such tool
+exists, and a reason not to expect one soon.
 
----
+### Two integrations, and they differ in a way that matters
 
-## 6. Proving it is really local
+Both require an AiDot account and one-time onboarding in the AiDot app. After that they diverge:
 
-Do not take "it's Matter, so it's local" on faith — verify it, once:
-
-1. **Block the bulbs at the firewall.** Deny the bulbs' addresses all WAN egress.
-2. **Toggle from HA.** It should work, instantly and unchanged.
-3. **Harder version — pull the internet entirely.** Unplug the WAN. HA → bulb must still work. If
-   it does, the control path is genuinely local end to end.
-4. **Watch what they phone.** Log outbound connection attempts for a day. A Matter bulb on a local
-   fabric should be near-silent — NTP and possibly a DNS lookup or an OTA check. Anything
-   resembling a persistent TLS session to a vendor endpoint is worth investigating.
-
-Once verified, leave the WAN block in place permanently. There is no feature on the far side of it
-that you want.
-
----
-
-## 7. Fallback paths if it is NOT Matter
-
-If §1.2 comes back negative — no `MT:` payload, no `_matterc._udp`, Alexa/Google only — then this
-is the non-Matter Consciot line and the job gets substantially harder. Ranked by effort:
-
-| Path | Viability | Notes |
+| | Official **`aidot`** (HA core, 2026.6+) | Community **`sulibot/hass-AiDot`** (HACS) |
 |---|---|---|
-| **Matter, via a newer revision** | — | Check whether the exact ASIN shipped a revised, Matter-certified SKU. Returning a non-Matter 6-pack and buying the Matter one is *far* cheaper than any path below. |
-| **LocalTuya / `tuya-local`** | ⚠️ Unlikely | Requires the device to actually be Tuya underneath. Current evidence says no (§1.1). Would need local key extraction. |
-| **`tuya-cloudcutter`** | ❌ Ruled out (provisionally) | **Zero** Consciot profiles in the device DB. Cloudcutter is vendor-keyed, not silicon-keyed — the right chip is not sufficient. |
-| **`tuya-convert`** | ❌ | Deprecated upstream, and inapplicable for the same vendor reason. |
-| **ESPHome / OpenBK via OTA** | 🚧 Unknown | Depends entirely on the silicon and whether an unauthenticated OTA path exists. **Pending research file `02-ota-path.md`.** |
-| **ESPHome / OpenBK via UART** | 🚧 Unknown | Always works eventually, costs an afternoon and a soldering iron per bulb — ×6. **Pending research file `03-uart-flash.md`.** |
+| Transport | Persistent **TCP** connection per device | UDP discovery + AES over **TCP 10000** |
+| **Cloud after setup** | **Checks the cloud every 6 hours, permanently** | Cloud in Phase 1 (key harvest) only |
+| Install | Built in — easiest | HACS |
+| Devices | A19, BR30 | Lights (brightness, color temp), switches |
+| Quality tier | Bronze | community |
 
-> ### ⚠️ Mains safety
-> Every path below the Matter line involves opening a bulb. An A19 bulb's driver board sits
-> directly on **mains potential** — there is no isolation transformer. The board can hold a lethal
-> charge in its bulk capacitor **after** it is unplugged. Never open a bulb that is connected to
-> mains, never probe a powered board, and discharge the bulk cap before touching anything. If you
-> are not already comfortable working on non-isolated mains circuitry, the correct move is to
-> return the bulbs and buy the Matter SKU.
+**The official integration is easier; the community fork has better longevity.** That 6-hourly
+cloud check is exactly the dependency that turns into a brick when a vendor shuts down its
+servers. The fork's architecture is cloud-once-then-local. Day-to-day *control* is local in both
+cases — the cloud is not in the command path either way.
+
+> ⚠️ **Do not take either project's marketing on faith.** The fork's README claims "no cloud
+> dependency for device control" but does not explicitly state that credentials survive a restart.
+> **Test it:** firewall the bulbs *and* HA from the internet, restart HA, and confirm control still
+> works. That is the falsifiable version of "cloud-once."
+
+### 🔴 If you land here, back up the keys the same day
+
+The `deviceId` / `password` / **`aesKey`** triplet is issued **only by AiDot's cloud**, and it is
+the sole thing that keeps these bulbs controllable if AiDot ever goes away. **Harvest and back up
+those credentials for all six bulbs immediately after onboarding**, stored outside HA's config
+entry.
+
+This is the lesson of every dead-cloud bulb project, applied one device *earlier*. When a vendor
+dies, its keys and onboarding die with it, and recovery becomes a community reverse-engineering
+effort — if it happens at all. Here the equivalent secrets are obtainable **right now, while the
+vendor is alive**, and only now. Backing them up converts a permanent vendor dependency into a
+one-time errand.
+
+**Practical notes:** use a throwaway AiDot account — the app is unavoidable, your real identity is
+not. Give each bulb a **DHCP reservation**, since the integration maps by IP and manual-IP mode
+needs statics anyway. UDP broadcast discovery does not cross subnets, so if HA is not on the same
+segment as the bulbs, expect to configure IPs manually.
+
+**Honest bottom line:** Path B does not meet "fully local" as strictly as Matter does. If your
+bulbs turn out to be non-Matter and you want true zero-cloud, the best move is almost certainly to
+**return them and buy the explicitly Matter-labelled Consciot SKU** (e.g. B0C4YDSSGQ, B0CGMDX8VJ),
+which reaches the ideal end state for the same money.
 
 ---
 
-## 8. Open questions
+## 9. Flashing — ruled out
 
-Tracked here, resolved as research lands.
+**On the Matter branch, flashing is not a fallback. It is destruction.**
 
-- [ ] **Is B0G6YFQDFW Matter-certified?** Inferred from the four-ecosystem box copy; needs the
-      physical `MT:` payload or a CSA certification-database hit. *(§1.2 settles it.)*
-- [ ] **What silicon is inside?** Unknown. Determines every fallback path. — `01-chip-id.md` 🚧
-- [ ] **Is there an unauthenticated OTA path?** — `02-ota-path.md` 🚧
-- [ ] **UART pad locations / flash procedure?** — `03-uart-flash.md` 🚧
-- [ ] **Verified HA capability surface** — does it expose color temperature, or RGB only?
-- [ ] **Factory-reset gesture** — 5 power cycles or 3?
-- [ ] **Does it implement Matter OTA?** Affects whether firmware can be updated without the vendor app.
+Each Matter unit is factory-provisioned with a unique **DAC (Device Attestation Certificate)** and
+operational keys in protected flash. Overwriting the firmware **destroys the DAC irrecoverably** —
+no rebuild restores it, and the bulb can never rejoin *any* Matter fabric again. You would be
+trading a fully-local, standards-based, multi-ecosystem bulb for a strictly worse one, to solve a
+problem the bulb does not have. Matter devices also commonly ship with secure boot and flash
+encryption enabled, so it frequently isn't even possible.
+
+**On the non-Matter branch** (Path B), flashing is the only true zero-cloud route — but there is
+**no public teardown of any AiDot / Linkind / Consciot bulb**, so the SoC is unidentified and there
+is no prior art to lean on. It costs six disassemblies and six soldering jobs on unknown silicon.
+Not recommended; if you attempt it anyway, do **one** bulb as a scout first.
+
+<details>
+<summary>Silicon notes — only relevant if the bulbs turn out to be non-Matter (unconfirmed)</summary>
+
+**Hard exclusion:** Matter over Wi-Fi requires Wi-Fi *and* BLE. That rules out **ESP8266/ESP8285**
+and **RTL8710BN** outright — neither has BLE — and effectively rules out plain **BK7231N/T**.
+
+FCC internal photos of an AiDot bulb filing show module pad labels:
+
+```
+NC · TX · RX · CEN · SL_2 · SL_1 · GND        ADC · PWM · IO16 · 3.3V
+```
+
+🔑 **`CEN` is the tell.** Espressif parts label chip-enable **`EN`**; **`CEN`** is Beken/Realtek
+nomenclature — which argues against an ESP32-C3 despite the C3 being the market-leading Matter bulb
+chip. Ranked candidates: **Beken BK7238** (~40%, Beken's Matter part, OpenBeken-supported),
+**Realtek RTL8720CF / Ameba Z2** (~30%), **ESP32-C3** (~20%).
+
+Countervailing lead: the blakadder template database lists two **Linkind wall switches** on
+**ESP32-SOLO-1**, suggesting AiDot may be an Espressif house. That is an inference across product
+lines, not a fact about this bulb.
+
+**None of this is confirmed, and on the Matter branch none of it matters.**
+</details>
+
+> ### ⚠️ Mains safety — if you open a bulb anyway
+> An A19 bulb's driver board sits directly on **mains potential** — there is no isolation
+> transformer. The board can hold a lethal charge in its bulk capacitor **after** it is unplugged.
+> Never open a bulb connected to mains, never probe a powered board, and discharge the bulk
+> capacitor before touching anything. Use **3.3 V logic only**. If you are not already comfortable
+> working on non-isolated mains circuitry, do not start here.
 
 ---
 
-## 9. Prior art & credits
+## 10. Open questions
+
+- [ ] 🚧 **Is this exact ASIN the Matter SKU?** The CSA record proves a Consciot A19 is certified;
+      confirming this box is that SKU is pending an owner check. *This is the only thing that
+      changes the recommendation.* → [§2](#2--which-sku-do-you-have)
+- [ ] **Exact HA UI wording for BLE-proxy commissioning** — the feature and architecture are
+      confirmed; the precise click-path is inferred from the standard add-device flow.
+- [ ] **Does matter.js 9.x need an interface hint on a multi-NIC host?** Expected: no.
+- [ ] **Silicon** — unconfirmed, and moot unless Path B applies.
+- [ ] **Does it implement Matter OTA?** Affects whether firmware updates surface in HA.
+- [ ] **Credential persistence in `hass-AiDot` across restarts** — Path B only; resolved
+      empirically by the firewall test in §8.
+
+*Note on the CSA record:* one search snippet showed certification ID `CSA2526DMAT45503-24` while
+the product page showed `CSA2609OMAT49756-24` — consistent with AiDot holding multiple bulb
+certificates. The VID, PID and device type are the load-bearing fields, and they are consistent.
+
+---
+
+## 11. Prior art & credits
 
 **What makes the recommended path possible**
 
-- **[Home Assistant](https://www.home-assistant.io/) Matter integration** and the
-  [Python Matter Server](https://github.com/home-assistant-libs/python-matter-server) — the local
-  fabric controller doing the actual work here.
-- **[Connectivity Standards Alliance](https://csa-iot.org/)** — Matter itself. A budget bulb that
-  can be adopted by any controller, with no vendor cloud in the path, is the entire point of the
-  standard, and it is genuinely delivering on it.
+- **[Home Assistant](https://www.home-assistant.io/)'s [Matter integration](https://www.home-assistant.io/integrations/matter/)**
+  and the [Python Matter Server](https://github.com/home-assistant-libs/python-matter-server) /
+  [Matter Server add-on](https://github.com/home-assistant/addons/blob/master/matter_server/DOCS.md)
+  — the local fabric controller doing the actual work, including phone-free BLE-proxy commissioning.
+- **[Connectivity Standards Alliance](https://csa-iot.org/)** — Matter itself, and the public
+  [certified-products database](https://csa-iot.org/csa_product/consciot-smart-light-bulb/) that
+  settled the identification question with a primary source instead of guesswork.
 - **[project-chip/connectedhomeip](https://github.com/project-chip/connectedhomeip)** — the
-  reference SDK, and the source of the `chip-tool` diagnostics worth knowing about.
+  reference SDK and `chip-tool` diagnostics.
 
-**Context projects — investigated, and *not* applicable here**
+**Path B tooling**
 
-- **[tuya-cloudcutter](https://github.com/tuya-cloudcutter/tuya-cloudcutter)** — brilliant work,
-  wrong vendor. Zero Consciot profiles. Listed so the next person does not spend an evening
-  discovering that independently.
+- **[Home Assistant `aidot` integration](https://www.home-assistant.io/integrations/aidot)** — the
+  official, built-in option.
+- **[sulibot/hass-AiDot](https://github.com/sulibot/hass-AiDot)** — the community fork, whose
+  `protocol_documentation.md` is the best public description of the AiDot local protocol.
+
+**Investigated and *not* applicable**
+
+- **[tuya-cloudcutter](https://github.com/tuya-cloudcutter/tuya-cloudcutter)** — excellent work,
+  wrong vendor. Zero Consciot profiles in 1,149. Listed so the next person does not spend an
+  evening rediscovering that.
 - **[tuya-convert](https://github.com/ct-Open-Source/tuya-convert)** — deprecated upstream, and
   inapplicable for the same reason.
 - **[ESPHome](https://esphome.io/) / [OpenBeken](https://github.com/openshwprojects/OpenBK7231T_App)**
-  — the destination if this turns out to be the non-Matter line and a flash path is needed.
-
-**Research notes** — the working notes behind this document (chip ID, OTA, UART, HA end-state) are
-kept locally and synthesized here rather than published raw, because they contain network detail
-specific to the author's lab.
+  — outstanding projects, but see [§9](#9-flashing--ruled-out): flashing a Matter bulb destroys it.
 
 ---
 
 ## Disclaimer
 
-This documents independent interoperability research on hardware the author purchased. No
-affiliation with Consciot, AiDot, Amazon, or the Connectivity Standards Alliance.
+Independent interoperability research on hardware the author purchased. No affiliation with
+Consciot, AiDot, Leedarson, Amazon, or the Connectivity Standards Alliance.
 
-Opening a mains-powered bulb voids its warranty and carries a real risk of electric shock and
-fire. Everything past §7 is at your own risk. The recommended path (§2) involves no disassembly
-and no warranty impact.
+The recommended path (§4) involves no disassembly and no warranty impact. Opening a mains-powered
+bulb voids its warranty and carries a real risk of electric shock and fire; §9 is at your own risk.
 
 ## License
 
