@@ -374,9 +374,11 @@ Then leave the block in place permanently. There is no feature on the far side o
 `localtuya` install. Consciot is AiDot, not Tuya; these devices do not speak the Tuya local
 protocol and will not yield to Tuya local-key extraction.
 
-### There is no zero-cloud option on this branch — be clear-eyed about it
+### The bootstrap needs the vendor. The end state does not.
 
-The vendor is required **twice**, and both halves are currently unavoidable:
+These are two different claims, and keeping them apart is the whole story of this branch.
+
+**Getting a factory-fresh bulb running requires AiDot's cloud — twice, unavoidably:**
 
 | Half | What it does | Community replacement? |
 |---|---|---|
@@ -389,34 +391,61 @@ vendors. Nobody has reverse-engineered AiDot *provisioning*, and no library deri
 flow, it is a substantially harder reverse-engineering target — which is likely why no such tool
 exists, and a reason not to expect one soon.
 
-### Two integrations, and they differ in a way that matters
+**But once bootstrapped, a genuine no-cloud end state is reachable** — with the community fork
+specifically:
 
-Both require an AiDot account and one-time onboarding in the AiDot app. After that they diverge:
+1. Onboard all six bulbs once in the AiDot app, using a **throwaway account**. The app is
+   unavoidable; your real identity is not.
+2. Install **`sulibot/hass-AiDot`** via HACS and log in **once**. It persists each device's
+   `aesKey` + `password` into Home Assistant's config entry.
+3. **Back up those credentials** (see below) — this is the step that makes the rest permanent.
+4. **Firewall the bulbs *and* Home Assistant outbound.**
+5. The lights keep working. The fork degrades gracefully — *"using cached login info"* — instead of
+   demanding the cloud it can no longer reach.
+
+That is a real no-cloud end state, not a permanent tether. It costs one vendor account and one
+bootstrap you can never repeat if you lose the keys.
+
+### The two integrations diverge on exactly the axis that matters
+
+Both require an AiDot account and one-time onboarding in the AiDot app. After that:
 
 | | Official **`aidot`** (HA core, 2026.6+) | Community **`sulibot/hass-AiDot`** (HACS) |
 |---|---|---|
-| Transport | Persistent **TCP** connection per device | UDP discovery + AES over **TCP 10000** |
-| **Cloud after setup** | **Checks the cloud every 6 hours, permanently** | Cloud in Phase 1 (key harvest) only |
+| Control transport | Persistent **TCP** connection per device | AES-encrypted **TCP :10000** |
+| Discovery | — | UDP **:6666** broadcast (*discovery only*) |
+| **Cloud after setup** | **Re-checks the cloud every 6 hours, forever** | Cloud at first login only |
+| **When cloud auth fails** | Raises `ConfigEntryError` → **the integration stops loading** | Falls back to **cached credentials** and keeps working |
+| Credential persistence | — | Persists `aesKey` + `password` to the config entry |
 | Install | Built in — easiest | HACS |
 | Devices | A19, BR30 | Lights (brightness, color temp), switches |
 | Quality tier | Bronze | community |
 
-**The official integration is easier; the community fork has better longevity.** That 6-hourly
-cloud check is exactly the dependency that turns into a brick when a vendor shuts down its
-servers. The fork's architecture is cloud-once-then-local. Day-to-day *control* is local in both
-cases — the cloud is not in the command path either way.
+**That fourth row is the entire decision.** The official integration is easier to install and
+perfectly fine while AiDot is alive — but on the day the vendor's auth endpoint stops answering, it
+raises a config error and stops loading, and your lights go with it. That is precisely the
+Sengled-style cloud death, reproduced in an integration. The fork keeps running on cached
+credentials. **Prefer the fork**, even though it is the harder install.
 
-> ⚠️ **Do not take either project's marketing on faith.** The fork's README claims "no cloud
-> dependency for device control" but does not explicitly state that credentials survive a restart.
-> **Test it:** firewall the bulbs *and* HA from the internet, restart HA, and confirm control still
-> works. That is the falsifiable version of "cloud-once."
+> ### 🚧 The one test that settles it — and it is not yet verified
+> Neither project's marketing should be taken on faith. **Firewall the bulbs *and* Home Assistant
+> off the internet, restart Home Assistant, and confirm control still works.** A restart is
+> essential: it is what proves credentials were *persisted* rather than merely held in memory since
+> login. This is the falsifiable version of "no-cloud", and it is the one open item on this branch.
 
 ### 🔴 If you land here, back up the keys the same day
 
 The `deviceId` / `password` / **`aesKey`** triplet is issued **only by AiDot's cloud**, and it is
-the sole thing that keeps these bulbs controllable if AiDot ever goes away. **Harvest and back up
-those credentials for all six bulbs immediately after onboarding**, stored outside HA's config
-entry.
+the sole thing that keeps these bulbs controllable if AiDot ever goes away. **Back up those
+credentials for all six bulbs immediately after onboarding.**
+
+With the fork, they live in Home Assistant's `.storage/core.config_entries`.
+
+> ⚠️ **That file contains every integration's secrets — not just AiDot's.** API tokens, cloud
+> passwords, and access tokens for everything else you have configured are in there too. Treat a
+> copy of it as a top-tier secret: encrypt it, store it in a password manager or an encrypted
+> volume, and **never commit it to a repository**. If you would rather not handle the whole file,
+> extract just the per-bulb triplet and back that up instead.
 
 This is the lesson of every dead-cloud bulb project, applied one device *earlier*. When a vendor
 dies, its keys and onboarding die with it, and recovery becomes a community reverse-engineering
@@ -424,15 +453,27 @@ effort — if it happens at all. Here the equivalent secrets are obtainable **ri
 vendor is alive**, and only now. Backing them up converts a permanent vendor dependency into a
 one-time errand.
 
-**Practical notes:** use a throwaway AiDot account — the app is unavoidable, your real identity is
-not. Give each bulb a **DHCP reservation**, since the integration maps by IP and manual-IP mode
-needs statics anyway. UDP broadcast discovery does not cross subnets, so if HA is not on the same
-segment as the bulbs, expect to configure IPs manually.
+### ⚠️ Manual IPs are a required setup step, not troubleshooting
 
-**Honest bottom line:** Path B does not meet "fully local" as strictly as Matter does. If your
-bulbs turn out to be non-Matter and you want true zero-cloud, the best move is almost certainly to
-**return them and buy the explicitly Matter-labelled Consciot SKU** (e.g. B0C4YDSSGQ, B0CGMDX8VJ),
-which reaches the ideal end state for the same money.
+The fork discovers devices by **UDP broadcast to `255.255.255.255:6666`**. A broadcast like that
+leaves **only the default-route interface** — so on a **multi-homed Home Assistant host**, where the
+IoT segment is reached over a secondary NIC that is *not* the default route, the discovery packet
+never goes out the leg the bulbs are on. Discovery then finds nothing, silently, while everything
+else looks correctly configured.
+
+**So on any multi-homed host, plan on manual configuration from the start:**
+
+- Configure **each bulb by IP** in the integration.
+- Give **every bulb a DHCP reservation**, so those IPs never move.
+
+Do this as part of setup. Treating it as a troubleshooting step costs an evening of chasing a
+discovery mechanism that was never going to work on that topology.
+
+**Honest bottom line:** Path B *can* reach a real no-cloud end state — but only via the fork, only
+after a vendor account and an app install, and only if you keep the keys. Matter costs none of
+that. If your bulbs turn out to be non-Matter and you want the clean end state, the best move is
+probably to **return them and buy the explicitly Matter-labelled Consciot SKU** (e.g. B0C4YDSSGQ,
+B0CGMDX8VJ), which gets you there for the same money.
 
 ---
 

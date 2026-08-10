@@ -748,8 +748,9 @@ light:
         will not yield to Tuya local-key extraction.</p>
       </div>
 
-      <h3>There is no zero-cloud option on this branch — be clear-eyed about it</h3>
-      <p>The vendor is required <strong>twice</strong>, and both halves are currently unavoidable:</p>
+      <h3>The bootstrap needs the vendor. The end state does not.</h3>
+      <p>These are two different claims, and keeping them apart is the whole story of this branch.</p>
+      <p><strong>Getting a factory-fresh bulb running requires AiDot's cloud — twice, unavoidably:</strong></p>
       <div class="tw">
       <table>
         <thead><tr><th>Half</th><th>What it does</th><th>Community replacement?</th></tr></thead>
@@ -765,39 +766,68 @@ light:
       BLE-assisted rather than a SoftAP HTTP flow, it is a substantially harder reverse-engineering
       target — likely why no such tool exists, and a reason not to expect one soon.</p>
 
-      <h3>Two integrations, and they differ in a way that matters</h3>
-      <p>Both require an AiDot account and one-time onboarding in the AiDot app. After that they diverge:</p>
+      <div class="note good">
+        <div class="nh">✅ But once bootstrapped, a genuine no-cloud end state is reachable</div>
+        <p>With the <strong>community fork</strong> specifically:</p>
+        <ol>
+          <li>Onboard all six bulbs once in the AiDot app, using a <strong>throwaway account</strong>.
+          The app is unavoidable; your real identity is not.</li>
+          <li>Install <strong><code>sulibot/hass-AiDot</code></strong> via HACS and log in
+          <strong>once</strong>. It persists each device's <code>aesKey</code> + <code>password</code>
+          into Home Assistant's config entry.</li>
+          <li><strong>Back up those credentials</strong> — the step that makes the rest permanent.</li>
+          <li><strong>Firewall the bulbs <em>and</em> Home Assistant outbound.</strong></li>
+          <li>The lights keep working. The fork degrades gracefully — <em>"using cached login info"</em>
+          — instead of demanding the cloud it can no longer reach.</li>
+        </ol>
+        <p>That is a real no-cloud end state, not a permanent tether. It costs one vendor account and
+        one bootstrap you can never repeat if you lose the keys.</p>
+      </div>
+
+      <h3>The two integrations diverge on exactly the axis that matters</h3>
+      <p>Both require an AiDot account and one-time onboarding in the AiDot app. After that:</p>
       <div class="tw">
       <table>
         <thead><tr><th></th><th>Official <code>aidot</code> (HA core, 2026.6+)</th><th>Community <code>sulibot/hass-AiDot</code></th></tr></thead>
         <tbody>
-          <tr><th>Transport</th><td>Persistent <strong>TCP</strong> connection per device</td><td>UDP discovery + AES over <strong>TCP 10000</strong></td></tr>
-          <tr><th>Cloud after setup</th><td><strong>Checks the cloud every 6 hours, permanently</strong></td><td>Cloud in Phase 1 (key harvest) only</td></tr>
+          <tr><th>Control transport</th><td>Persistent <strong>TCP</strong> connection per device</td><td>AES-encrypted <strong>TCP :10000</strong></td></tr>
+          <tr><th>Discovery</th><td>—</td><td>UDP <strong>:6666</strong> broadcast (<em>discovery only</em>)</td></tr>
+          <tr><th>Cloud after setup</th><td><strong>Re-checks the cloud every 6 hours, forever</strong></td><td>Cloud at first login only</td></tr>
+          <tr><th>When cloud auth fails</th><td>Raises <code>ConfigEntryError</code> → <strong>the integration stops loading</strong></td><td>Falls back to <strong>cached credentials</strong> and keeps working</td></tr>
+          <tr><th>Credential persistence</th><td>—</td><td>Persists <code>aesKey</code> + <code>password</code> to the config entry</td></tr>
           <tr><th>Install</th><td>Built in — easiest</td><td>HACS</td></tr>
           <tr><th>Devices</th><td>A19, BR30</td><td>Lights (brightness, color temp), switches</td></tr>
           <tr><th>Quality tier</th><td>Bronze</td><td>community</td></tr>
         </tbody>
       </table>
       </div>
-      <p><strong>The official integration is easier; the community fork has better longevity.</strong>
-      That 6-hourly cloud check is exactly the dependency that turns into a brick when a vendor shuts
-      down its servers. The fork's architecture is cloud-once-then-local. Day-to-day <em>control</em>
-      is local in both cases — the cloud is not in the command path either way.</p>
+      <p><strong>That fourth row is the entire decision.</strong> The official integration is easier
+      to install and perfectly fine while AiDot is alive — but on the day the vendor's auth endpoint
+      stops answering, it raises a config error and stops loading, and your lights go with it. That is
+      precisely the Sengled-style cloud death, reproduced in an integration. The fork keeps running on
+      cached credentials. <strong>Prefer the fork</strong>, even though it is the harder install.</p>
 
       <div class="note warn">
-        <div class="nh">⚠️ Do not take either project's marketing on faith</div>
-        <p>The fork's README claims "no cloud dependency for device control" but does not explicitly
-        state that credentials survive a restart. <strong>Test it:</strong> firewall the bulbs
-        <em>and</em> HA from the internet, restart HA, and confirm control still works. That is the
-        falsifiable version of "cloud-once."</p>
+        <div class="nh">🚧 The one test that settles it — and it is not yet verified</div>
+        <p>Neither project's marketing should be taken on faith. <strong>Firewall the bulbs <em>and</em>
+        Home Assistant off the internet, restart Home Assistant, and confirm control still works.</strong>
+        A restart is essential: it is what proves credentials were <em>persisted</em> rather than merely
+        held in memory since login. This is the falsifiable version of "no-cloud", and it is the one
+        open item on this branch.</p>
       </div>
 
       <div class="note danger">
         <div class="nh">🔴 If you land here, back up the keys the same day</div>
         <p>The <code>deviceId</code> / <code>password</code> / <strong><code>aesKey</code></strong>
         triplet is issued <strong>only by AiDot's cloud</strong>, and it is the sole thing that keeps
-        these bulbs controllable if AiDot ever goes away. <strong>Harvest and back up those credentials
-        for all six bulbs immediately after onboarding</strong>, stored outside HA's config entry.</p>
+        these bulbs controllable if AiDot ever goes away. <strong>Back up those credentials for all six
+        bulbs immediately after onboarding.</strong></p>
+        <p>With the fork, they live in Home Assistant's <code>.storage/core.config_entries</code>.</p>
+        <p>⚠️ <strong>That file contains every integration's secrets — not just AiDot's.</strong> API
+        tokens, cloud passwords, and access tokens for everything else you have configured are in there
+        too. Treat a copy of it as a top-tier secret: encrypt it, store it in a password manager or an
+        encrypted volume, and <strong>never commit it to a repository</strong>. If you would rather not
+        handle the whole file, extract just the per-bulb triplet and back that up instead.</p>
         <p>This is the lesson of every dead-cloud bulb project, applied one device <em>earlier</em>.
         When a vendor dies, its keys and onboarding die with it, and recovery becomes a community
         reverse-engineering effort — if it happens at all. Here the equivalent secrets are obtainable
@@ -805,17 +835,27 @@ light:
         permanent vendor dependency into a one-time errand.</p>
       </div>
 
-      <p><strong>Practical notes:</strong> use a throwaway AiDot account — the app is unavoidable, your
-      real identity is not. Give each bulb a <strong>DHCP reservation</strong>, since the integration
-      maps by IP and manual-IP mode needs statics anyway. UDP broadcast discovery does not cross
-      subnets, so if HA is not on the same segment as the bulbs, expect to configure IPs manually.</p>
+      <h3>⚠️ Manual IPs are a required setup step, not troubleshooting</h3>
+      <p>The fork discovers devices by <strong>UDP broadcast to <code>255.255.255.255:6666</code></strong>.
+      A broadcast like that leaves <strong>only the default-route interface</strong> — so on a
+      <strong>multi-homed Home Assistant host</strong>, where the IoT segment is reached over a secondary
+      NIC that is <em>not</em> the default route, the discovery packet never goes out the leg the bulbs
+      are on. Discovery then finds nothing, silently, while everything else looks correctly configured.</p>
+      <p><strong>So on any multi-homed host, plan on manual configuration from the start:</strong></p>
+      <ul>
+        <li>Configure <strong>each bulb by IP</strong> in the integration.</li>
+        <li>Give <strong>every bulb a DHCP reservation</strong>, so those IPs never move.</li>
+      </ul>
+      <p>Do this as part of setup. Treating it as a troubleshooting step costs an evening of chasing a
+      discovery mechanism that was never going to work on that topology.</p>
 
       <div class="note">
         <div class="nh">Honest bottom line</div>
-        <p>Path B does not meet "fully local" as strictly as Matter does. If your bulbs turn out to be
-        non-Matter and you want true zero-cloud, the best move is almost certainly to <strong>return
-        them and buy the explicitly Matter-labelled Consciot SKU</strong> (e.g. B0C4YDSSGQ,
-        B0CGMDX8VJ), which reaches the ideal end state for the same money.</p>
+        <p>Path B <em>can</em> reach a real no-cloud end state — but only via the fork, only after a
+        vendor account and an app install, and only if you keep the keys. Matter costs none of that. If
+        your bulbs turn out to be non-Matter and you want the clean end state, the best move is probably
+        to <strong>return them and buy the explicitly Matter-labelled Consciot SKU</strong> (e.g.
+        B0C4YDSSGQ, B0CGMDX8VJ), which gets you there for the same money.</p>
       </div>
     </section>
 
