@@ -84,9 +84,25 @@ device at a time), with two attempts and a 15 s timeout each — up to ~30 s per
 unreachable device. With the default 30 s poll and six bulbs, a bad patch can
 queue refreshes faster than they drain.
 
-**Recommended: 60–120 s for six bulbs.** State is *pushed* over the persistent TCP
+**Recommended: 60 s for six bulbs.** State is *pushed* over the persistent TCP
 connection, so polling is a backstop, not the main path — a longer interval costs
 little responsiveness.
+
+⚠️ **Don't just raise it arbitrarily — the two settings are coupled:**
+
+```python
+self._availability_grace_seconds = max(poll_interval * 10, 300)
+```
+
+| poll_interval | grace before a bulb reads *unavailable* |
+|---|---|
+| 30 s (default) | 300 s (5 min) |
+| **60 s (recommended)** | **600 s (10 min)** |
+| 120 s | 1200 s (**20 min**) |
+
+At 120 s a genuinely dead bulb still reports *available* for twenty minutes, so
+automations act on stale state. 60 s drains the serialized refresh queue comfortably
+for six bulbs while keeping the grace window defensible.
 
 ## Entities
 

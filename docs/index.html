@@ -394,8 +394,10 @@ footer p{max-width:74ch}
       <h3>It is not Matter either — and here is why that took some pinning down</h3>
       <div class="note good">
         <div class="nh">✅ Settled by the physical packaging</div>
-        <p>The owner has the box: <strong>no Matter logo, no QR, no 11-digit setup code.</strong> That
-        is decisive.</p>
+        <p>The owner physically inspected the bulbs and the carton: <strong>no Matter logo, no QR, no
+        11-digit setup code, anywhere.</strong> That is decisive — a Matter device is required to carry
+        a commissioning payload, and one that carries none cannot be commissioned as Matter by any
+        controller, whatever its silicon can do.</p>
       </div>
       <p>It is worth recording why the paper trail pointed the other way, because the next person will
       hit the same trap:</p>
@@ -671,6 +673,16 @@ light:
     <section id="security">
       <h2>8. Security — an open commissioning window</h2>
 
+      <div class="note good">
+        <div class="nh">✅ This does not apply to these bulbs — answer first</div>
+        <p>Peer-reviewed research found a serious commissioning flaw in AiDot's <strong>Matter</strong>
+        devices. <strong>These bulbs are the non-Matter Wi-Fi SKU, and the same paper found AiDot's
+        non-Matter devices were not vulnerable.</strong> Nothing here is an action item for the
+        documented path.</p>
+        <p>It is kept because <a href="#matter">§9</a> suggests buying the Matter SKU, and <em>that</em>
+        variant is the one affected. Read this before acting on §9.</p>
+      </div>
+
       <p>Independent, peer-reviewed research has found a serious flaw in how AiDot's
       <strong>Matter</strong> devices handle commissioning.</p>
 
@@ -701,14 +713,17 @@ light:
         coordinated disclosure.</p>
       </div>
 
-      <h3>Does this affect these bulbs?</h3>
+      <h3>Does this affect these bulbs? No.</h3>
       <div class="note good">
-        <div class="nh">Probably not — and the reason is the useful part</div>
-        <p>The same paper found AiDot's <strong>legacy, non-Matter</strong> devices were
-        <strong>not</strong> vulnerable, because their manufacturer commissioning channel was
-        <strong>already occupied</strong> — leaving no free slot for an outsider to claim. These bulbs
-        are the legacy Wi-Fi line (owner-confirmed), so on the paper's own evidence they sit in the
-        category that tested <em>safe</em>.</p>
+        <div class="nh">And the reason is the genuinely interesting part</div>
+        <p>The same paper tested AiDot's <strong>legacy, non-Matter</strong> devices and found them
+        <strong>not vulnerable</strong> — because their manufacturer commissioning channel was
+        <strong>already occupied</strong>, leaving no free slot for an outsider to claim. The very
+        thing that makes this SKU worse in every other respect (a vendor channel you cannot remove)
+        is what closes the door here.</p>
+        <p>These bulbs are the non-Matter Wi-Fi SKU — confirmed by physical inspection, no Matter code
+        on the bulbs or the carton — so they fall squarely in the category the authors tested and
+        cleared. <strong>The open-window flaw is not a risk for this device.</strong></p>
       </div>
 
       <div class="note danger">
@@ -720,45 +735,29 @@ light:
         firmware — but you should make that choice knowingly rather than discover it later.</p>
       </div>
 
-      <h3>Mitigations</h3>
-      <p>Stated with what each one actually does, because two of the three are <strong>not</strong>
-      fixes for this specific finding:</p>
+      <h3>What to do about it</h3>
+      <p><strong>For these bulbs: nothing.</strong> There is no exposure to close.</p>
 
-      <div class="tw">
-      <table>
-        <thead><tr><th>Mitigation</th><th>What it does</th><th>What it does <em>not</em> do</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><strong>1. Keep the bulbs on a dedicated, isolated IoT network</strong> (separate VLAN or SSID)</td>
-            <td>Contains blast radius. An attacker who claims a bulb reaches only that segment, not your file server.</td>
-            <td>Close the window. The attack needs no Wi-Fi credentials, so segmentation limits consequences rather than preventing access. Defence in depth, not a patch.</td>
-          </tr>
-          <tr>
-            <td><strong>2. Remove the Matter QR / setup-code stickers after setup</strong></td>
-            <td>Defends against a <em>different</em>, simpler attack — someone photographing a visible setup code and commissioning the bulb legitimately.</td>
-            <td>Address this finding, which explicitly requires <strong>no code at all</strong>.</td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
+      <p><strong>Worth doing anyway, unrelated to this finding:</strong> keep the bulbs on a
+      <strong>dedicated, isolated IoT network</strong> (separate VLAN or SSID). That is generic good
+      practice for any cloud-adjacent device — it contains the blast radius if <em>anything</em> on
+      that segment is ever compromised, and it costs nothing. Note it would not have closed this
+      particular window either: an attack needing no Wi-Fi credentials is not stopped by segmentation,
+      only contained. Defence in depth, not a patch.</p>
 
-      <div class="note warn">
-        <div class="nh">📸 Photograph the codes before you peel anything</div>
-        <p>You need them if you ever factory-reset the bulb, and the sticker is unreadable once the
-        bulb is in a fixture. Store the photos as secrets.</p>
-      </div>
+      <p><strong>If you buy the Matter SKU instead</strong> (<a href="#matter">§9</a>), one speculative
+      option exists:</p>
 
-      <h4>3. Claim the manufacturer channel yourself</h4>
       <div class="note warn">
         <div class="nh">🚧 Reasoned hypothesis — unproven. Not one of the paper's Matter findings.</div>
         <p>The paper's <em>legacy</em> devices were safe precisely because their manufacturer channel
         was already occupied. It is therefore plausible that onboarding a Matter unit through the
         <strong>AiDot app</strong> occupies that channel and closes the window. <strong>This was not
         tested on the Matter line</strong>, by the authors or by us. Treat it as a hypothesis worth
-        investigating, not a mitigation you can rely on.</p>
+        investigating, not a mitigation to rely on.</p>
         <p>Note the trade-off if it <em>were</em> true: installing the vendor app to secure the Matter
-        SKU costs you the no-app, no-account property that made the Matter SKU attractive in the first
-        place.</p>
+        SKU costs you the no-app, no-account property that made that SKU attractive in the first place
+        — which lands you close to the setup this guide already documents.</p>
       </div>
 
       <p><strong>General Matter hygiene, worth knowing regardless of vendor:</strong> a commissioning

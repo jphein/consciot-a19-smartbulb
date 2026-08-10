@@ -85,8 +85,10 @@ If you already run LocalTuya, that makes it a *more* tempting wrong turn, not a 
 
 ### It is not Matter either — and here is why that took some pinning down
 
-The owner has the physical packaging: **no Matter logo, no QR, no 11-digit setup code.** That is
-decisive, and it settles the question.
+The owner physically inspected the bulbs and the carton: **no Matter logo, no QR, no 11-digit setup
+code, anywhere.** That is decisive, and it settles the question — a Matter device is required to
+carry a commissioning payload, and one that carries none cannot be commissioned as Matter by any
+controller, whatever its silicon can do.
 
 It is worth recording why the paper trail pointed the other way, because the next person will hit
 the same trap:
@@ -344,6 +346,14 @@ light:
 
 ## 8. Security — an open commissioning window
 
+> ### ✅ This does not apply to these bulbs — answer first
+> Peer-reviewed research found a serious commissioning flaw in AiDot's **Matter** devices. **These
+> bulbs are the non-Matter Wi-Fi SKU, and the same paper found AiDot's non-Matter devices were not
+> vulnerable.** Nothing here is an action item for the documented path.
+>
+> It is kept because [§9](#9-the-matter-sku-exists--this-just-isnt-it) suggests buying the Matter
+> SKU, and *that* variant is the one affected. Read this before acting on §9.
+
 Independent, peer-reviewed research has found a serious flaw in how AiDot's **Matter** devices
 handle commissioning.
 
@@ -365,14 +375,18 @@ The authors replicated it **three times** and confirmed the window was still ope
 pairing**. The paper's mitigation column for this finding reads **"None."** AiDot did not respond
 to a **three-month** coordinated disclosure.
 
-### Does this affect these bulbs?
+### Does this affect these bulbs? No.
 
-**Probably not — and the reason is the useful part.**
+And the reason is the genuinely interesting part.
 
-The same paper found AiDot's **legacy, non-Matter** devices were **not** vulnerable, because their
-manufacturer commissioning channel was **already occupied** — leaving no free slot for an outsider
-to claim. These bulbs are the legacy Wi-Fi line (owner-confirmed), so on the paper's own evidence
-they sit in the category that tested *safe*.
+The same paper tested AiDot's **legacy, non-Matter** devices and found them **not vulnerable** —
+because their manufacturer commissioning channel was **already occupied**, leaving no free slot for
+an outsider to claim. The very thing that makes this SKU worse in every other respect (a vendor
+channel you cannot remove) is what closes the door here.
+
+These bulbs are the non-Matter Wi-Fi SKU — confirmed by physical inspection, no Matter code on the
+bulbs or the carton — so they fall squarely in the category the authors tested and cleared. **The
+open-window flaw is not a risk for this device.**
 
 > ### 🛑 But this changes the recommendation in §9
 > [§9](#9-the-matter-sku-exists--this-just-isnt-it) tells you to buy the Matter SKU instead, because
@@ -381,36 +395,29 @@ they sit in the category that tested *safe*.
 > commissioning-window bug, not an architectural property of Matter, and it is fixable in firmware —
 > but you should make it knowingly rather than discover it later.
 
-### Mitigations
+### What to do about it
 
-Stated with what each one actually does, because two of the three are **not** fixes for this
-specific finding:
+**For these bulbs: nothing.** There is no exposure to close.
 
-1. **Keep the bulbs on a dedicated, isolated IoT network** (separate VLAN or SSID).
-   **What it does:** contains blast radius. An attacker who claims a bulb reaches only that segment,
-   not your file server.
-   **What it does not do:** close the window. The attack needs no Wi-Fi credentials, so network
-   segmentation does not prevent the initial access — it limits the consequences. Worth doing
-   regardless; this is defence in depth, not a patch.
+**Worth doing anyway, unrelated to this finding:** keep the bulbs on a **dedicated, isolated IoT
+network** (separate VLAN or SSID). That is generic good practice for any cloud-adjacent device — it
+contains the blast radius if *anything* on that segment is ever compromised, and it costs nothing.
+Note that it would not have closed this particular window either: an attack needing no Wi-Fi
+credentials is not stopped by segmentation, only contained. Defence in depth, not a patch.
 
-2. **Remove the Matter QR / setup-code stickers from the bulbs after setup.**
-   **What it does:** defends against a *different* and simpler attack — someone photographing a
-   visible setup code and commissioning the bulb legitimately.
-   **What it does not do:** address this finding, which explicitly requires **no code at all**.
-   **Photograph and store the codes first** — you need them if you ever factory-reset the bulb, and
-   the sticker is unreadable once the bulb is in a fixture.
+**If you buy the Matter SKU instead** ([§9](#9-the-matter-sku-exists--this-just-isnt-it)), one
+speculative option exists:
 
-3. **Claim the manufacturer channel yourself.**
-   > **🚧 Reasoned hypothesis — unproven. This is not one of the paper's Matter findings.**
-   >
-   > The paper's *legacy* devices were safe precisely because their manufacturer channel was already
-   > occupied. It is therefore plausible that onboarding a Matter unit through the **AiDot app**
-   > occupies that channel and closes the window. **This was not tested on the Matter line**, by the
-   > authors or by us. Treat it as a hypothesis worth investigating, not a mitigation you can rely
-   > on.
-   >
-   > Note the trade-off if it *were* true: installing the vendor app to secure the Matter SKU costs
-   > you the no-app, no-account property that made the Matter SKU attractive in the first place.
+> **🚧 Reasoned hypothesis — unproven. This is not one of the paper's Matter findings.**
+>
+> The paper's *legacy* devices were safe precisely because their manufacturer channel was already
+> occupied. It is therefore plausible that onboarding a Matter unit through the **AiDot app**
+> occupies that channel and closes the window. **This was not tested on the Matter line**, by the
+> authors or by us. Treat it as a hypothesis worth investigating, not a mitigation to rely on.
+>
+> Note the trade-off if it *were* true: installing the vendor app to secure the Matter SKU costs
+> you the no-app, no-account property that made that SKU attractive in the first place — which
+> lands you close to the setup this guide already documents.
 
 **General Matter hygiene, worth knowing regardless of vendor:** a commissioning window that stays
 open is a class of bug, not a one-off. If your controller can list a device's fabrics, check
