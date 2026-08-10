@@ -13,6 +13,9 @@ secrets.yml
 *_backup*
 *-backup*
 backups/
+# …but this is our own tool, not a backup artifact. The rule above is meant to
+# catch dumped firmware and credential blobs; the script itself is safe to ship.
+!ha-integration/aidot-key-backup.py
 
 # ─── Matter / commissioning material — device-identifying, never publish ──────
 # Setup codes, QR payloads and DACs are per-device secrets: anyone with the code
@@ -28,6 +31,13 @@ pairing-codes*
 # prior-art/ — vendored upstream clones (their own git repos), not ours to ship.
 research/
 prior-art/
+
+# ─── Never vendor third-party integration code ────────────────────────────────
+# A local copy of sulibot/hass-AiDot is useful for reading and testing, but must
+# not be redistributed here: it would ship someone else's code under this repo's
+# LICENSE, and pin users to a stale fork with no update path. Reference upstream
+# via HACS instead — see ha-integration/README.md.
+ha-integration/custom_components/
 
 # ─── ESPHome build artifacts ──────────────────────────────────────────────────
 .esphome/

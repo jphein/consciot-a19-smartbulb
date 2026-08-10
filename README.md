@@ -213,6 +213,22 @@ immediately after onboarding.**
 
 With the fork, the credentials live in Home Assistant's `.storage/core.config_entries`.
 
+### There is a tool in this repo that does it safely
+
+**[`ha-integration/aidot-key-backup.py`](ha-integration/aidot-key-backup.py)** — see the
+[setup runbook](ha-integration/README.md) for the full flow.
+
+```bash
+./aidot-key-backup.py --host <user>@<ha-host> --dry-run    # inspect first
+./aidot-key-backup.py --host <user>@<ha-host> --out ~/secure-backup
+```
+
+It filters **on the Home Assistant side**, so only the `aidot` rows ever cross the wire — the
+full secrets file is never transferred and never written to local disk. It excludes the AiDot
+account token by design, never prints a secret, writes gpg-AES256 ciphertext at mode `0600`,
+**refuses to write inside a git work tree**, and round-trip-decrypts to verify before reporting
+success. A backup that has not been round-tripped is a claim, not a backup.
+
 > ### ⚠️ That file contains every integration's secrets — not just AiDot's
 > API tokens, cloud passwords and access tokens for **everything else** you have configured are in
 > there too. Treat a copy as a top-tier secret:
