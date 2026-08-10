@@ -500,6 +500,45 @@ footer p{max-width:74ch}
         <p><strong>Use the fork.</strong> It is the harder install and the right one.</p>
       </div>
 
+      <h3>And there is a defect biting cloud-connected users right now</h3>
+      <p>The argument above is about a hypothetical future shutdown. This one is present tense.</p>
+      <p>Upstream issue <strong><a href="https://github.com/AiDot-Development-Team/hass-AiDot/issues/34">#34</a></strong>
+      — opened <strong>2026-08-01, still open, zero comments</strong> — reports <em>devices remaining
+      unavailable even after a successful re-auth, with the underlying cloud session 401-ing on a
+      recurring ~6-hour cycle.</em></p>
+      <p><strong>The ~6-hour period is the tell.</strong> It matches the cloud device-list refresh
+      cycle exactly. Which codebases actually run one:</p>
+      <div class="tw">
+      <table>
+        <thead><tr><th>Codebase</th><th>Periodic cloud call</th><th>Exposed to #34?</th></tr></thead>
+        <tbody>
+          <tr><td>Vendor upstream <code>AiDot-Development-Team/hass-AiDot</code></td><td>yes, ~6 h</td><td>🔴 yes — where #34 is filed</td></tr>
+          <tr><td><strong>HA core <code>aidot</code></strong></td><td><code>UPDATE_DEVICE_LIST_INTERVAL = timedelta(hours=6)</code></td><td>🔴 yes — and it raises <code>ConfigEntryError</code> on failure</td></tr>
+          <tr><td><strong><code>sulibot/hass-AiDot</code></strong></td><td><strong>none</strong></td><td>🟢 <strong>no</strong></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>In the fork the only cloud call is a single login at setup, wrapped so that failure falls
+      back to cached credentials. Its coordinator's update interval drives a <strong>local TCP</strong>
+      status refresh, not a cloud request — so there is no 6-hourly call to 401 in the first place.</p>
+      <p><strong>The protection is therefore twofold, and the order matters:</strong></p>
+      <ol>
+        <li><strong>Choosing the fork already avoids the #34 mechanism</strong> — while still
+        cloud-connected, before you change anything on the firewall.</li>
+        <li><strong><a href="#local">§6</a> then removes the last cloud contact entirely</strong>, so
+        the failure mode cannot exist at all.</li>
+      </ol>
+      <p>That reframes the firewall step: it is not only insurance against a vendor that might die
+      someday, it closes out a defect that is degrading other people's installs this week.</p>
+
+      <div class="note warn">
+        <div class="nh">⚠️ Do not read the fork's empty issue tracker as a clean bill of health</div>
+        <p><code>sulibot/hass-AiDot</code> shows zero issues because <strong>issue creation is
+        restricted on that repository.</strong> That is a null signal, not a positive one — real
+        reports land on the vendor repo. Judge the fork on its code, which is where the evidence above
+        comes from.</p>
+      </div>
+
       <h3>Step 1 — a throwaway AiDot account</h3>
       <p>The app is unavoidable; your real identity is not. Create the account with an alias address.
       This minimises what the vendor learns and costs nothing.</p>
@@ -600,6 +639,10 @@ footer p{max-width:74ch}
       </ul>
       <p>Do this as part of setup. Treating it as a troubleshooting step costs an evening of chasing a
       discovery mechanism that was never going to work on that topology.</p>
+      <p><strong>This is not just theory.</strong> Upstream issue
+      <strong><a href="https://github.com/AiDot-Development-Team/hass-AiDot/issues/29">#29</a></strong>
+      (2026-05-30) — <em>"Why do I have to put my devices in the main wifi?"</em> — is another user
+      hitting the same broadcast limitation independently, and reaching the same place.</p>
 
       <div class="note">
         <div class="nh">Why manual IPs are a clean answer, not a workaround</div>

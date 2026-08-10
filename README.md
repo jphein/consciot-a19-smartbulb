@@ -180,6 +180,42 @@ control. The fork degrades gracefully to *"using cached login info"* and keeps w
 
 **Use the fork.** It is the harder install and the right one.
 
+### And there is a defect biting cloud-connected users right now
+
+The argument above is about a hypothetical future shutdown. This one is present tense.
+
+Upstream issue **[#34](https://github.com/AiDot-Development-Team/hass-AiDot/issues/34)** — opened
+**2026-08-01, still open, zero comments** — reports *devices remaining unavailable even after a
+successful re-auth, with the underlying cloud session 401-ing on a recurring ~6-hour cycle.*
+
+**The ~6-hour period is the tell.** It matches the cloud device-list refresh cycle exactly. Which
+codebases actually run one:
+
+| Codebase | Periodic cloud call | Exposed to #34? |
+|---|---|---|
+| Vendor upstream `AiDot-Development-Team/hass-AiDot` | yes, ~6 h | 🔴 yes — where #34 is filed |
+| **HA core `aidot`** | `UPDATE_DEVICE_LIST_INTERVAL = timedelta(hours=6)` | 🔴 yes — and it raises `ConfigEntryError` on failure |
+| **`sulibot/hass-AiDot`** | **none** | 🟢 **no** |
+
+In the fork the only cloud call is a single login at setup, wrapped so that failure falls back to
+cached credentials. Its coordinator's update interval drives a **local TCP** status refresh, not a
+cloud request — so there is no 6-hourly call to 401 in the first place.
+
+**The protection is therefore twofold, and the order matters:**
+
+1. **Choosing the fork already avoids the #34 mechanism** — while still cloud-connected, before you
+   change anything on the firewall.
+2. **[§6](#6-proving-it-is-really-local) then removes the last cloud contact entirely**, so the
+   failure mode cannot exist at all.
+
+That reframes the firewall step: it is not only insurance against a vendor that might die someday,
+it closes out a defect that is degrading other people's installs this week.
+
+> ### ⚠️ Do not read the fork's empty issue tracker as a clean bill of health
+> `sulibot/hass-AiDot` shows zero issues because **issue creation is restricted on that
+> repository.** That is a null signal, not a positive one — real reports land on the vendor repo.
+> Judge the fork on its code, which is where the evidence above comes from.
+
 ### Step 1 — a throwaway AiDot account
 
 The app is unavoidable; your real identity is not. Create the account with an alias address. This
@@ -278,6 +314,11 @@ correct.** It is a genuinely nasty failure mode because there is no error to rea
 
 Do this as part of setup. Treating it as a troubleshooting step costs an evening of chasing a
 discovery mechanism that was never going to work on that topology.
+
+**This is not just theory.** Upstream issue
+**[#29](https://github.com/AiDot-Development-Team/hass-AiDot/issues/29)** (2026-05-30) —
+*"Why do I have to put my devices in the main wifi?"* — is another user hitting the same broadcast
+limitation independently, and reaching the same place.
 
 > Note that **UDP :6666 is discovery only** — actual control is the AES-encrypted TCP :10000
 > session. Once bulbs are configured by IP, discovery is not in the path at all, which is why
