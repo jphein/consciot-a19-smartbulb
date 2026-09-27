@@ -702,4 +702,4 @@ is entirely at your own risk.
 
 ## License
 
-[MIT](LICENSE) © 2026 JP ([@jphein](https://github.com/jphein))
+AGPL-3.0-or-later © 2026 Jeffrey Pine Hein. See [LICENSE](LICENSE).

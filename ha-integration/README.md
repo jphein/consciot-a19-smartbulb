@@ -186,5 +186,5 @@ fork of [`toxuin/hass-AiDot`](https://github.com/toxuin/hass-AiDot), built on
 [`python-aidot`](https://github.com/AiDot-Development-Team/python-AiDot).
 
 All integration code stays with upstream — install it from there. The only original
-work in this directory is `aidot-key-backup.py`, MIT-licensed under this repository's
+work in this directory is `aidot-key-backup.py`, AGPL-3.0-or-later under this repository's
 [LICENSE](../LICENSE).
